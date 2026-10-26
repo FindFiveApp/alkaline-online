@@ -1,4 +1,5 @@
 const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
