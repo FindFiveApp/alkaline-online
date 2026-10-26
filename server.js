@@ -28,6 +28,72 @@ if (req.method === "OPTIONS") {
    return send(res,200,{reference:crypto.randomUUID(),totalPence:total,status:'demo_only',message:'Order preview only. No payment taken or order saved.'});
   }catch(e){return send(res,400,{error:e.message});}
  }
- if(req.method==='GET' && (url.pathname==='/'||url.pathname==='/index.html')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});return fs.createReadStream(path.join(__dirname,'index.html')).pipe(res);}
+if (req.method === 'POST' && url.pathname === '/api/checkout') {
+  try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return send(res, 503, { error: 'Payments are not configured' });
+    }
+
+    let raw = '';
+    for await (const chunk of req) {
+      raw += chunk;
+      if (raw.length > 12000) throw Error('Request too large');
+    }
+
+    const body = JSON.parse(raw);
+    const items = body.items;
+
+    if (!Array.isArray(items) || !items.length || items.length > 50) {
+      throw Error('Invalid basket');
+    }
+
+    const names = [
+      'Organic Chamomile Tea',
+      'Dried Peppermint Leaves',
+      'Organic Turmeric Powder',
+      'Organic Chia Seeds',
+      'Hibiscus Flower Tea',
+      'Organic Ceylon Cinnamon',
+      'Dried Rosemary',
+      'Organic Rolled Oats'
+    ];
+
+    const line_items = items.map(item => {
+      const product = catalog.find(p => p.id === item.id);
+
+      if (!product || !Number.isInteger(item.quantity) ||
+          item.quantity < 1 || item.quantity > 100) {
+        throw Error('Invalid item');
+      }
+
+      return {
+        price_data: {
+          currency: 'gbp',
+          product_data: { name: names[product.id - 1] },
+          unit_amount: product.price
+        },
+        quantity: item.quantity
+      };
+    });
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items,
+      success_url: ALLOWED_ORIGIN + '/?payment=success&session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: ALLOWED_ORIGIN + '/?payment=cancelled',
+      billing_address_collection: 'required',
+      shipping_address_collection: {
+        allowed_countries: ['GB']
+      }
+    });
+
+    return send(res, 200, { url: session.url });
+  } catch (error) {
+    console.error('Checkout error:', error);
+    return send(res, 400, { error: 'Unable to create checkout session' });
+  }
+}
+  
+  if(req.method==='GET' && (url.pathname==='/'||url.pathname==='/index.html')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});return fs.createReadStream(path.join(__dirname,'index.html')).pipe(res);}
  return send(res,404,{error:'Not found'});
 }).listen(PORT,'0.0.0.0',()=>console.log(`Alkaline Online listening on ${PORT}`));
