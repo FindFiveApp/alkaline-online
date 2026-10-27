@@ -6,7 +6,49 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const PORT = Number(process.env.PORT || 3000);
 const ALLOWED_ORIGIN = "https://alkaline-online.onrender.com";
-const catalog = [{id:1,price:650},{id:2,price:495},{id:3,price:575},{id:4,price:725},{id:5,price:695},{id:6,price:525},{id:7,price:395},{id:8,price:450}];
+
+// Supabase is accessed only from the Render backend; never expose its secret key.
+const DB_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const DB_KEY = process.env.SUPABASE_SECRET_KEY || '';
+async function db(resource, options = {}) {
+  if (!DB_URL || !DB_KEY) throw Error('Supabase is not configured');
+  const response = await fetch(`${DB_URL}/rest/v1/${resource}`, {
+    ...options,
+    headers: {
+      apikey: DB_KEY,
+      Authorization: `Bearer ${DB_KEY}`,
+      Accept: 'application/json',
+      ...(options.headers || {})
+    },
+    signal: AbortSignal.timeout(10000)
+  });
+  if (!response.ok) {
+    console.error('Supabase request failed:', response.status);
+    throw Error('Database request failed');
+  }
+  if (response.status === 204) return null;
+  return response.json();
+}
+async function productsFromDb(all = false) {
+  const where = all ? '' : '&is_active=eq.true';
+  return db('products?select=id,name,description,category,price_pence,stock_quantity,is_active,image_url&order=id.asc' + where);
+}
+function validateProduct(p, partial = false) {
+  if (!p || typeof p !== 'object' || Array.isArray(p)) throw Error('Invalid product');
+  const allowed = ['name','description','category','price_pence','stock_quantity','is_active','image_url'];
+  const keys = Object.keys(p);
+  if (!keys.length || keys.some(k => !allowed.includes(k))) throw Error('Invalid product fields');
+  if (!partial && (!keys.includes('name') || !keys.includes('price_pence') || !keys.includes('stock_quantity'))) throw Error('Missing product fields');
+  if ('name' in p && (typeof p.name !== 'string' || !p.name.trim() || p.name.length > 120)) throw Error('Invalid name');
+  if ('description' in p && (typeof p.description !== 'string' || p.description.length > 1500)) throw Error('Invalid description');
+  if ('category' in p && (typeof p.category !== 'string' || !p.category.trim() || p.category.length > 80)) throw Error('Invalid category');
+  if ('price_pence' in p && (!Number.isSafeInteger(p.price_pence) || p.price_pence < 1 || p.price_pence > 10000000)) throw Error('Invalid price');
+  if ('stock_quantity' in p && (!Number.isSafeInteger(p.stock_quantity) || p.stock_quantity < 0 || p.stock_quantity > 1000000)) throw Error('Invalid stock quantity');
+  if ('is_active' in p && typeof p.is_active !== 'boolean') throw Error('Invalid availability');
+  if ('image_url' in p && p.image_url !== null && (typeof p.image_url !== 'string' || p.image_url.length > 1000 || (p.image_url && !/^https:\/\//.test(p.image_url)))) throw Error('Invalid image URL');
+  return Object.fromEntries(keys.map(k => [k, typeof p[k] === 'string' ? p[k].trim() : p[k]]));
+}
+
 // Admin access uses a password stored ONLY in Render (ADMIN_PASSWORD).
 // Sessions are signed, HttpOnly, Secure cookies and expire after 8 hours.
 const ADMIN_COOKIE = 'alkaline_admin';
@@ -59,7 +101,7 @@ const send=(res,status,obj)=>{res.writeHead(status,{'Content-Type':'application/
 http.createServer(async (req,res)=>{
 res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
 res.setHeader("Vary", "Origin");
-res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
 res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
 if (req.method === "OPTIONS") {
@@ -157,7 +199,31 @@ if (req.method === "OPTIONS") {
        return send(res,502,{error:'Could not save order status to Stripe'});
      }
    }
-   return send(res,404,{error:'Not found'});
+       if (url.pathname === '/api/admin/products' && req.method === 'GET') {
+      try { return send(res,200,{products:await productsFromDb(true)}); }
+      catch { return send(res,503,{error:'Could not load products from Supabase'}); }
+    }
+    if (url.pathname === '/api/admin/products' && req.method === 'POST') {
+      if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
+      try {
+        const product = validateProduct(await jsonBody(req,8192));
+        const saved = await db('products?select=*',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(product)});
+        return send(res,201,{product:saved[0]});
+      } catch(e) { return send(res,400,{error:e.message}); }
+    }
+    const productMatch = url.pathname.match(/^\/api\/admin\/products\/(\d+)$/);
+    if (productMatch && req.method === 'PATCH') {
+      if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
+      try {
+        const id=Number(productMatch[1]);
+        if (!Number.isSafeInteger(id) || id < 1) throw Error('Invalid product ID');
+        const product=validateProduct(await jsonBody(req,8192),true);
+        const saved=await db(`products?id=eq.${id}&select=*`,{method:'PATCH',headers:{'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(product)});
+        if (!saved.length) return send(res,404,{error:'Product not found'});
+        return send(res,200,{product:saved[0]});
+      } catch(e) { return send(res,400,{error:e.message}); }
+    }
+return send(res,404,{error:'Not found'});
  }
  if (req.method === 'POST' && url.pathname === '/api/webhook') {
   try {
@@ -206,14 +272,12 @@ if (req.method === "OPTIONS") {
   }
 } 
  if(req.method==='GET' && url.pathname==='/api/health') return send(res,200,{status:'ok',service:'alkaline-online'});
- if(req.method==='GET' && url.pathname==='/api/products') return send(res,200,{products:catalog});
- if(req.method==='POST' && url.pathname==='/api/orders') {
-  let raw='';try{for await(const chunk of req){raw+=chunk;if(raw.length>12000)throw Error('Request too large');}const body=JSON.parse(raw);
-   const items=body.items;if(!Array.isArray(items)||!items.length||items.length>50)throw Error('Invalid basket');
-   let total=0;for(const item of items){const p=catalog.find(p=>p.id===item.id);if(!p||!Number.isInteger(item.quantity)||item.quantity<1||item.quantity>100)throw Error('Invalid item');total+=p.price*item.quantity;}
-   return send(res,200,{reference:crypto.randomUUID(),totalPence:total,status:'demo_only',message:'Order preview only. No payment taken or order saved.'});
-  }catch(e){return send(res,400,{error:e.message});}
- }
+   if(req.method==='GET' && url.pathname==='/api/products') {
+    try { return send(res,200,{products:await productsFromDb()}); }
+    catch { return send(res,503,{error:'Product catalogue temporarily unavailable'}); }
+  }
+  if(req.method==='POST' && url.pathname==='/api/orders')
+    return send(res,410,{error:'Order previews are no longer available; use secure checkout.'});
 if (req.method === 'POST' && url.pathname === '/api/checkout') {
   try {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -233,32 +297,14 @@ if (req.method === 'POST' && url.pathname === '/api/checkout') {
       throw Error('Invalid basket');
     }
 
-    const names = [
-      'Organic Chamomile Tea',
-      'Dried Peppermint Leaves',
-      'Organic Turmeric Powder',
-      'Organic Chia Seeds',
-      'Hibiscus Flower Tea',
-      'Organic Ceylon Cinnamon',
-      'Dried Rosemary',
-      'Organic Rolled Oats'
-    ];
-
+    const available = await productsFromDb();
     const line_items = items.map(item => {
-      const product = catalog.find(p => p.id === item.id);
-
-      if (!product || !Number.isInteger(item.quantity) ||
-          item.quantity < 1 || item.quantity > 100) {
-        throw Error('Invalid item');
-      }
-
+      if (!Number.isSafeInteger(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 100) throw Error('Invalid item');
+      const product = available.find(p => p.id === item.id);
+      if (!product || product.stock_quantity < item.quantity) throw Error('Product unavailable or insufficient stock');
       return {
-        price_data: {
-          currency: 'gbp',
-          product_data: { name: names[product.id - 1] },
-          unit_amount: product.price
-        },
-        quantity: item.quantity
+        price_data: {currency:'gbp',product_data:{name:product.name},unit_amount:product.price_pence},
+        quantity:item.quantity
       };
     });
 
@@ -275,8 +321,8 @@ if (req.method === 'POST' && url.pathname === '/api/checkout') {
 
     return send(res, 200, { url: session.url });
   } catch (error) {
-    console.error('Checkout error:', error);
-    return send(res, 400, { error: 'Unable to create checkout session' });
+    console.error('Checkout error:', error.message);
+    return send(res, 400, { error: error.message === 'Product unavailable or insufficient stock' ? error.message : 'Unable to create checkout session' });
   }
 }
   
