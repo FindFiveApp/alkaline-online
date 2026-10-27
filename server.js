@@ -19,6 +19,52 @@ if (req.method === "OPTIONS") {
   return res.end();
 }
  const url = new URL(req.url,'http://localhost');
+ if (req.method === 'POST' && url.pathname === '/api/webhook') {
+  try {
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      return send(res, 503, { error: 'Webhook not configured' });
+    }
+
+    const chunks = [];
+    let size = 0;
+
+    for await (const chunk of req) {
+      size += chunk.length;
+      if (size > 1024 * 1024) {
+        return send(res, 413, { error: 'Payload too large' });
+      }
+      chunks.push(chunk);
+    }
+
+    const payload = Buffer.concat(chunks);
+    const signature = req.headers['stripe-signature'];
+
+    if (!signature) {
+      return send(res, 400, { error: 'Missing Stripe signature' });
+    }
+
+    const event = stripe.webhooks.constructEvent(
+      payload,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+
+      if (session.payment_status === 'paid') {
+        console.log('Verified Stripe payment:', session.id);
+        // TODO: Save the paid order in persistent storage.
+        // Do not fulfil orders based on this log alone.
+      }
+    }
+
+    return send(res, 200, { received: true });
+  } catch (error) {
+    console.error('Stripe webhook verification failed:', error.message);
+    return send(res, 400, { error: 'Invalid webhook' });
+  }
+} 
  if(req.method==='GET' && url.pathname==='/api/health') return send(res,200,{status:'ok',service:'alkaline-online'});
  if(req.method==='GET' && url.pathname==='/api/products') return send(res,200,{products:catalog});
  if(req.method==='POST' && url.pathname==='/api/orders') {
