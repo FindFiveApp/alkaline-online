@@ -125,13 +125,36 @@ if (req.method === "OPTIONS") {
            customer_email:s.customer_details?.email || s.customer_email || null,
            shipping_name:s.shipping_details?.name || s.collected_information?.shipping_details?.name || null,
            shipping_address:s.shipping_details?.address || s.collected_information?.shipping_details?.address || null,
-           items
+           items,
+           fulfilment_status: s.metadata?.fulfilment_status || (s.payment_status === 'paid' ? 'Preparing' : null)
          };
        }));
        return send(res,200,{orders,has_more:page.has_more,source:'stripe'});
      } catch(e) {
        console.error('Admin Stripe lookup failed:',e.message);
        return send(res,502,{error:'Could not retrieve Stripe orders. Check Checkout Sessions API permissions.'});
+     }
+   }
+   if (url.pathname === '/api/admin/order-status' && req.method === 'POST') {
+     if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
+     let body;
+     try { body = await jsonBody(req,1024); }
+     catch { return send(res,400,{error:'Invalid request'}); }
+     const allowed = ['Preparing','Ready for dispatch','Dispatched','Delivered'];
+     if (typeof body.id !== 'string' || !/^cs_(live|test)_[a-zA-Z0-9]+$/.test(body.id) || !allowed.includes(body.status))
+       return send(res,400,{error:'Invalid order or status'});
+     try {
+       const session = await stripe.checkout.sessions.retrieve(body.id);
+       if (session.mode !== 'payment' || session.payment_status !== 'paid')
+         return send(res,400,{error:'Only paid orders can be updated'});
+       // Stripe Checkout Session metadata persists across Render restarts.
+       const updated = await stripe.checkout.sessions.update(session.id, {
+         metadata: {...(session.metadata || {}), fulfilment_status: body.status}
+       });
+       return send(res,200,{id:updated.id,status:updated.metadata.fulfilment_status});
+     } catch(e) {
+       console.error('Admin status update failed:',e.message);
+       return send(res,502,{error:'Could not save order status to Stripe'});
      }
    }
    return send(res,404,{error:'Not found'});
