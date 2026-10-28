@@ -51,6 +51,24 @@ async function db(resource, options = {}) {
   if (response.status === 204) return null;
   return response.json();
 }
+// Public store uses a manually maintained, server-authoritative products.json.
+// Stock starts at zero until the owner confirms quantities. Never trust client prices.
+function productsFromManualCatalog() {
+  const filename = path.join(__dirname, 'products.json');
+  const parsed = JSON.parse(fs.readFileSync(filename, 'utf8'));
+  if (!Array.isArray(parsed) || !parsed.length) throw Error('Manual catalogue is empty');
+  const seen = new Set();
+  return parsed.map(p => {
+    if (!p || !Number.isSafeInteger(p.id) || p.id < 1 || seen.has(p.id) ||
+        typeof p.name !== 'string' || !p.name.trim() || p.name.length > 120 ||
+        typeof p.category !== 'string' || !p.category.trim() ||
+        !Number.isSafeInteger(p.price_pence) || p.price_pence < 1 ||
+        !Number.isSafeInteger(p.stock_quantity) || p.stock_quantity < 0 ||
+        typeof p.is_active !== 'boolean') throw Error('Invalid manual catalogue entry');
+    seen.add(p.id);
+    return p;
+  });
+}
 async function productsFromDb(all = false) {
   const where = all ? '' : '&is_active=eq.true';
   return db('products?select=id,name,description,category,price_pence,stock_quantity,is_active,image_url&order=id.asc' + where);
@@ -295,8 +313,8 @@ return send(res,404,{error:'Not found'});
 } 
  if(req.method==='GET' && url.pathname==='/api/health') return send(res,200,{status:'ok',service:'alkaline-online'});
    if(req.method==='GET' && url.pathname==='/api/products') {
-    try { return send(res,200,{products:await productsFromDb()}); }
-    catch { return send(res,503,{error:'Product catalogue temporarily unavailable'}); }
+    try { return send(res,200,{products:productsFromManualCatalog().filter(p=>p.is_active)}); }
+    catch (e) { console.error('Manual catalogue failed:', e.message); return send(res,503,{error:'Product catalogue temporarily unavailable'}); }
   }
   if(req.method==='POST' && url.pathname==='/api/orders')
     return send(res,410,{error:'Order previews are no longer available; use secure checkout.'});
@@ -319,7 +337,7 @@ if (req.method === 'POST' && url.pathname === '/api/checkout') {
       throw Error('Invalid basket');
     }
 
-    const available = await productsFromDb();
+    const available = productsFromManualCatalog().filter(p=>p.is_active);
     const line_items = items.map(item => {
       if (!Number.isSafeInteger(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 100) throw Error('Invalid item');
       const product = available.find(p => p.id === item.id);
