@@ -344,7 +344,9 @@ if (req.method === 'POST' && url.pathname === '/api/checkout') {
     return send(res, 200, { url: session.url });
   } catch (error) {
     console.error('Checkout error:', error.message);
-    return send(res, 400, { error: error.message === 'Product unavailable or insufficient stock' ? error.message : 'Unable to create checkout session' });
+    const known = ['Product unavailable or insufficient stock','Invalid basket','Invalid item'];
+    const message = known.includes(error.message) ? error.message : 'Checkout temporarily unavailable: unable to verify products or start payment';
+    return send(res, known.includes(error.message) ? 400 : 503, {error: message});
   }
 }
   
