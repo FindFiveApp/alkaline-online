@@ -6,7 +6,7 @@
     "price_pence": 650,
     "description": "Gentle floral herbal infusion",
     "emoji": "🌼",
-    "stock_quantity": 0,
+    "stock_quantity": 10,
     "is_active": true
   },
   {
@@ -16,7 +16,7 @@
     "price_pence": 495,
     "description": "A refreshing aromatic herb",
     "emoji": "🌿",
-    "stock_quantity": 0,
+    "stock_quantity": 10,
     "is_active": true
   },
   {
@@ -26,7 +26,7 @@
     "price_pence": 575,
     "description": "Golden spice for everyday cooking",
     "emoji": "🫚",
-    "stock_quantity": 0,
+    "stock_quantity": 10,
     "is_active": true
   },
   {
@@ -36,7 +36,7 @@
     "price_pence": 725,
     "description": "Versatile seeds for breakfast and baking",
     "emoji": "🌱",
-    "stock_quantity": 0,
+    "stock_quantity": 10,
     "is_active": true
   },
   {
@@ -46,7 +46,7 @@
     "price_pence": 695,
     "description": "Bright, naturally tart infusion",
     "emoji": "🌺",
-    "stock_quantity": 0,
+    "stock_quantity": 10,
     "is_active": true
   },
   {
@@ -56,7 +56,7 @@
     "price_pence": 525,
     "description": "Warm and fragrant ground cinnamon",
     "emoji": "🍂",
-    "stock_quantity": 0,
+    "stock_quantity": 10,
     "is_active": true
   },
   {
@@ -66,7 +66,7 @@
     "price_pence": 395,
     "description": "Fragrant culinary herb",
     "emoji": "🌿",
-    "stock_quantity": 0,
+    "stock_quantity": 10,
     "is_active": true
   },
   {
@@ -76,7 +76,7 @@
     "price_pence": 450,
     "description": "Wholesome plant-based pantry staple",
     "emoji": "🥣",
-    "stock_quantity": 0,
+    "stock_quantity": 10,
     "is_active": true
   }
 ]
