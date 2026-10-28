@@ -8,23 +8,38 @@ const PORT = Number(process.env.PORT || 3000);
 const ALLOWED_ORIGIN = "https://alkaline-online.onrender.com";
 
 // Supabase is accessed only from the Render backend; never expose its secret key.
-const DB_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
-const DB_KEY = process.env.SUPABASE_SECRET_KEY || '';
+const DB_URL = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+const DB_KEY = (process.env.SUPABASE_SECRET_KEY || '').trim();
 async function db(resource, options = {}) {
   if (!DB_URL || !DB_KEY) throw Error('Supabase is not configured');
-  const response = await fetch(`${DB_URL}/rest/v1/${resource}`, {
-    ...options,
-    headers: {
-      apikey: DB_KEY,
-      Authorization: `Bearer ${DB_KEY}`,
-      Accept: 'application/json',
-      ...(options.headers || {})
-    },
-    signal: AbortSignal.timeout(10000)
-  });
+  if (!/^https:\/\/[^/]+\.supabase\.co$/.test(DB_URL)) {
+    console.error('Supabase configuration error: invalid project URL format');
+    throw Error('Invalid Supabase project URL');
+  }
+  // New sb_secret_ keys belong in apikey, NOT in a Bearer Authorization header.
+  // Legacy service_role JWTs may be sent in both headers.
+  const headers = {
+    apikey: DB_KEY,
+    Accept: 'application/json',
+    ...(DB_KEY.startsWith('sb_secret_') ? {} : {Authorization: `Bearer ${DB_KEY}`}),
+    ...(options.headers || {})
+  };
+  let response;
+  try {
+    response = await fetch(`${DB_URL}/rest/v1/${resource}`, {
+      ...options,
+      headers,
+      signal: AbortSignal.timeout(10000)
+    });
+  } catch (error) {
+    // Do not print error.message: fetch errors may contain secret header values.
+    console.error('Supabase network or header failure:', error.name || 'UnknownError');
+    throw Error('Supabase connection failed');
+  }
   if (!response.ok) {
-    console.error('Supabase request failed:', response.status);
-    throw Error('Database request failed');
+    // Log only HTTP status, never request headers or keys.
+    console.error('Supabase API returned HTTP', response.status);
+    throw Error('Supabase API request failed (HTTP ' + response.status + ')');
   }
   if (response.status === 204) return null;
   return response.json();
