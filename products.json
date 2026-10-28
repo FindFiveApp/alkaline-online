@@ -1,1 +1,83 @@
+[
+  {
+    "id": 1,
+    "name": "Organic Chamomile Tea",
+    "category": "Herbal teas",
+    "price_pence": 650,
+    "description": "Gentle floral herbal infusion",
+    "emoji": "🌼",
+    "stock_quantity": 0,
+    "is_active": true
+  },
+  {
+    "id": 2,
+    "name": "Dried Peppermint Leaves",
+    "category": "Herbs",
+    "price_pence": 495,
+    "description": "A refreshing aromatic herb",
+    "emoji": "🌿",
+    "stock_quantity": 0,
+    "is_active": true
+  },
+  {
+    "id": 3,
+    "name": "Organic Turmeric Powder",
+    "category": "Spices",
+    "price_pence": 575,
+    "description": "Golden spice for everyday cooking",
+    "emoji": "🫚",
+    "stock_quantity": 0,
+    "is_active": true
+  },
+  {
+    "id": 4,
+    "name": "Organic Chia Seeds",
+    "category": "Pantry",
+    "price_pence": 725,
+    "description": "Versatile seeds for breakfast and baking",
+    "emoji": "🌱",
+    "stock_quantity": 0,
+    "is_active": true
+  },
+  {
+    "id": 5,
+    "name": "Hibiscus Flower Tea",
+    "category": "Herbal teas",
+    "price_pence": 695,
+    "description": "Bright, naturally tart infusion",
+    "emoji": "🌺",
+    "stock_quantity": 0,
+    "is_active": true
+  },
+  {
+    "id": 6,
+    "name": "Organic Ceylon Cinnamon",
+    "category": "Spices",
+    "price_pence": 525,
+    "description": "Warm and fragrant ground cinnamon",
+    "emoji": "🍂",
+    "stock_quantity": 0,
+    "is_active": true
+  },
+  {
+    "id": 7,
+    "name": "Dried Rosemary",
+    "category": "Herbs",
+    "price_pence": 395,
+    "description": "Fragrant culinary herb",
+    "emoji": "🌿",
+    "stock_quantity": 0,
+    "is_active": true
+  },
+  {
+    "id": 8,
+    "name": "Organic Rolled Oats",
+    "category": "Pantry",
+    "price_pence": 450,
+    "description": "Wholesome plant-based pantry staple",
+    "emoji": "🥣",
+    "stock_quantity": 0,
+    "is_active": true
+  }
+]
 
