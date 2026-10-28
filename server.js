@@ -37,9 +37,16 @@ async function db(resource, options = {}) {
     throw Error('Supabase connection failed');
   }
   if (!response.ok) {
-    // Log only HTTP status, never request headers or keys.
-    console.error('Supabase API returned HTTP', response.status);
-    throw Error('Supabase API request failed (HTTP ' + response.status + ')');
+    // Supabase returns a structured error. Log only an allowlisted error code;
+    // never print its raw body, headers, URL, tokens, or secret key.
+    let code = 'unknown';
+    try {
+      const errorBody = await response.json();
+      const candidate = errorBody && (errorBody.code || errorBody.error_code);
+      if (typeof candidate === 'string' && /^[A-Za-z0-9_\-]{1,64}$/.test(candidate)) code = candidate;
+    } catch (_) { /* Error body was not JSON. */ }
+    console.error(`Supabase API error: HTTP ${response.status}; code=${code}`);
+    throw Error('Supabase API request failed (HTTP ' + response.status + '; code=' + code + ')');
   }
   if (response.status === 204) return null;
   return response.json();
