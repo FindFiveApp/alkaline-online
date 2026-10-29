@@ -78,6 +78,16 @@
     "emoji": "🥣",
     "stock_quantity": 10,
     "is_active": true
+  },
+  {
+    "id": 9,
+    "description": "Testing the product management",
+    "category": "Herbs",
+    "emoji": "🌿",
+    "image_url": null,
+    "is_active": true,
+    "name": "Test Herbal Product",
+    "price_pence": 100,
+    "stock_quantity": 1
   }
 ]
-
