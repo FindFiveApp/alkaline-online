@@ -373,7 +373,7 @@ nav button.active{outline:1.5px solid #b7c9ec;outline-offset:-1.5px}
 <label>Initial site</label><input id="expSite" placeholder="Site name / postcode"/>
 <label>Other end-client sites</label><input id="expOtherSites"/>
 <label>Anticipated engagement duration</label><input id="expDuration" placeholder="e.g. 12 hours"/>
-<h2>Mileage journeys</h2><button class="secondary" onclick="importExpenseShifts()" type="button">Import work dates and sites from Schedule</button><p class="docs-note" id="expenseSyncStatus">Select any date in the work week (Friday–Thursday). The week ending will be set to Thursday when you import. Enter your own postcodes and return mileage.</p><div id="expJourneyRows"></div>
+<h2>Mileage journeys</h2><button class="secondary" onclick="importExpenseShifts()" type="button">Import work dates and sites from Schedule</button><p class="docs-note" id="expenseSyncStatus">Select the Thursday week-ending date. Import gathers every saved shift from the preceding Friday through Thursday, including multiple shifts on the same day. Enter your own postcodes and return mileage.</p><div id="expJourneyRows"></div>
 <button class="secondary" onclick="addJourney()">+ Add journey</button>
 <label>Signature / typed name</label><input id="expSignature" placeholder="Type your name to sign"/>
 <label>Signature date</label><input id="expSignDate" type="date"/>
@@ -423,7 +423,7 @@ renderShifts();
  const keys=['docName','docAgency','docDuty','docRate','docRailWeek','docWeekEnd','expName','expClient','expAgency','expWeekEnd','expServices','expSite','expOtherSites','expDuration'];
  keys.forEach(id=>{let x=el(id);try{let saved=localStorage.getItem('myspend_doc_'+id);if(saved!==null)x.value=saved}catch{}x.addEventListener('input',()=>{try{localStorage.setItem('myspend_doc_'+id,x.value)}catch{}})});
  el('expSignDate').value=new Date().toISOString().slice(0,10);
- window.showDoc=type=>{if(!v('docWeekEnd')&&el('weekEnding')?.value)el('docWeekEnd').value=el('weekEnding').value;if(!v('expWeekEnd')&&v('docWeekEnd'))el('expWeekEnd').value=v('docWeekEnd');let ts=type==='timesheet';el('timesheetEditor').classList.toggle('docs-hidden',!ts);el('expensesEditor').classList.toggle('docs-hidden',ts);el('chooseTimesheet').className=ts?'selected':'secondary';el('chooseExpenses').className=ts?'secondary':'selected'};
+ window.showDoc=type=>{if(!v('docWeekEnd')&&el('weekEnding')?.value)el('docWeekEnd').value=el('weekEnding').value;let ts=type==='timesheet';el('timesheetEditor').classList.toggle('docs-hidden',!ts);el('expensesEditor').classList.toggle('docs-hidden',ts);el('chooseTimesheet').className=ts?'selected':'secondary';el('chooseExpenses').className=ts?'secondary':'selected'};
  window.addDocShift=function(d={}){let div=document.createElement('div');div.className='item doc-shift';div.innerHTML=`<div class="grid"><div><label>Date</label><input class="sd" type="date" value="${safe(d.date||'')}"></div><div><label>Location</label><input class="sp" value="${safe(d.place||'')}" placeholder="Site"></div><div><label>Start</label><input class="ss" type="time" value="${safe(d.start||'')}"></div><div><label>Finish</label><input class="se" type="time" value="${safe(d.end||'')}"></div><div><label>Unpaid break (mins)</label><input class="sb" type="number" min="0" value="0"></div><div><label>Job number</label><input class="sj" value="${safe(d.job||'')}"></div></div><button type="button" class="danger mini" style="margin-top:9px">Remove shift</button>`;div.querySelector('button').onclick=()=>div.remove();el('docShiftRows').appendChild(div)};
  window.addJourney=function(d={}){let div=document.createElement('div');div.className='item exp-journey';div.innerHTML=`<div class="grid"><div><label>Date</label><input class="jd" type="date" value="${safe(d.date||'')}"></div><div><label>Home postcode</label><input class="jh" value="${safe(d.home||'')}" placeholder="Postcode"></div><div><label>Site postcode</label><input class="js" value="${safe(d.site||'')}" placeholder="Postcode"></div><div><label>Return miles</label><input class="jm" type="number" min="0" step="0.1" value="${safe(d.miles??'')}"></div></div><button type="button" class="danger mini" style="margin-top:9px">Remove journey</button>`;div.querySelector('button').onclick=()=>div.remove();el('expJourneyRows').appendChild(div)};
  window.importDocShifts=()=>{let end=v('docWeekEnd');if(!end)return alert('Choose the week-ending date first.');let last=new Date(end+'T12:00:00'),first=new Date(last);first.setDate(first.getDate()-7);let found=shifts.filter(x=>{let d=new Date(x.date+'T12:00:00');return d>=first&&d<=last}).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));if(!found.length)return alert('No saved shifts found for this week.');if(found.length>8)return alert('The original UK Rail form has eight shift rows. Please choose eight or fewer.');el('docShiftRows').innerHTML='';found.forEach(addDocShift);el('railSyncStatus').textContent=found.length+' shifts imported. PDF rows will match their weekdays (Friday through Friday). Check times, breaks and locations.'};
@@ -432,17 +432,19 @@ renderShifts();
   if(!selected)return null;
   const day=new Date(selected+'T12:00:00');
   if(Number.isNaN(day.getTime()))return null;
-  // Friday is day 0 of the payroll week; Thursday is day 6.
-  const offset=(day.getDay()+2)%7;
-  const first=new Date(day);
-  first.setDate(day.getDate()-offset);
-  const last=new Date(first);
-  last.setDate(first.getDate()+6);
+  // This field is WEEK ENDING: normalize to the most recent Thursday.
+  // A Friday or Saturday date therefore belongs to the NEXT week,
+  // and cannot extend the previously selected Thursday's reporting period.
+  const back=(day.getDay()+3)%7;
+  const last=new Date(day);
+  last.setDate(day.getDate()-back);
+  const first=new Date(last);
+  first.setDate(last.getDate()-6);
   const iso=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
   return {first:iso(first),last:iso(last)};
  }
- function weeklyShifts(selected){
-  const range=saturnWeekBounds(selected);
+ function weeklyShifts(weekEnding){
+  const range=saturnWeekBounds(weekEnding);
   if(!range)return [];
   return shifts.filter(sh=>sh.date>=range.first&&sh.date<=range.last)
     .sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
@@ -452,16 +454,28 @@ renderShifts();
  // Saturn's reporting period always runs Friday through Thursday.
  el('expWeekEnd').value=range.last;
  el('expWeekEnd').dispatchEvent(new Event('input',{bubbles:true}));
- let found=weeklyShifts(end);
- if(!found.length)return alert('No saved Schedule shifts for '+range.first+' to '+range.last+' (Friday–Thursday).');let unique=[...new Map(found.map(sh=>[sh.date+'|'+(sh.place||''),sh])).values()];if(unique.length>7)return alert('The Saturn form has seven mileage rows. Select a shorter period or add journeys manually.');let existing=[...document.querySelectorAll('.exp-journey')].some(n=>['jd','jh','js','jm'].some(k=>get(n,k)));if(existing&&!confirm('Replace the current mileage rows with dates and sites from Schedule? Any entered mileage will be cleared.'))return;
- el('expJourneyRows').innerHTML='';unique.forEach(sh=>addJourney({date:sh.date,site:sh.place||''}));if(!v('expSite')&&found[0].place)el('expSite').value=found[0].place;
+ if(end!==range.last)el('expenseSyncStatus').textContent='Week ending corrected to Thursday '+range.last+'.';
+ let found=weeklyShifts(range.last);
+ if(!found.length)return alert('No saved Schedule shifts for '+range.first+' to '+range.last+' (Friday–Thursday).');
+ // Do not deduplicate by date or site: every saved shift is part of the weekly record.
+ // The original Saturn PDF has seven journey rows; never silently omit shifts.
+ if(found.length>7){
+   el('expenseSyncStatus').textContent=found.length+' shifts found for '+range.first+' to '+range.last+
+     '. The original Saturn form has only seven mileage rows. No shifts have been discarded or imported. Please use separate forms for additional journeys.';
+   return alert(found.length+' shifts were found for this Friday–Thursday week, but the Saturn form only has seven mileage rows. Import stopped so no shift is silently omitted.');
+ }
+ let existing=[...document.querySelectorAll('.exp-journey')].some(n=>['jd','jh','js','jm'].some(k=>get(n,k)));
+ if(existing&&!confirm('Replace the current mileage rows with ALL '+found.length+' saved shifts from '+range.first+' to '+range.last+'? Any entered mileage will be cleared.'))return;
+ el('expJourneyRows').innerHTML='';
+ found.forEach(sh=>addJourney({date:sh.date,site:sh.place||''}));
+ if(!v('expSite')&&found[0].place)el('expSite').value=found[0].place;
  if(!v('expOtherSites')){let sites=[...new Set(found.map(sh=>sh.place).filter(Boolean))];el('expOtherSites').value=sites.slice(1).join(', ')}
  if(!v('expDuration')){let hrs=found.reduce((n,sh)=>n+shiftHours(sh),0);el('expDuration').value=hrs.toFixed(1)+' hours (before unpaid breaks)'}
- el('expenseSyncStatus').textContent=unique.length+' work date/site entries imported for '+range.first+' to '+range.last+' (Friday–Thursday). Confirm site postcodes and enter actual return mileage.';
+ el('expenseSyncStatus').textContent='All '+found.length+' saved shifts imported for '+range.first+' to '+range.last+' (Friday–Thursday). Confirm site postcodes and enter actual return mileage.';
  };
  function syncWeekEnd(from,to){let val=v(from);if(val&&!v(to))el(to).value=val}
- el('docWeekEnd').addEventListener('change',()=>syncWeekEnd('docWeekEnd','expWeekEnd'));
- el('expWeekEnd').addEventListener('change',()=>syncWeekEnd('expWeekEnd','docWeekEnd'));
+ // Saturn and UK Rail week-ending dates are independent.
+
  // Documents and Schedule remain editable independently; imports are deliberate to avoid erasing entered data.
  function shiftRows(){let rows=[...document.querySelectorAll('.doc-shift')].map(n=>({date:get(n,'sd'),place:get(n,'sp'),start:get(n,'ss'),end:get(n,'se'),breaks:Number(get(n,'sb')||0),job:get(n,'sj')})).filter(x=>x.date||x.start||x.end||x.place);if(rows.length>8)throw Error('The UK Rail template supports a maximum of eight shift rows.');for(let x of rows){if(!x.date||!x.start||!x.end)throw Error('Each shift needs a date, start time and finish time.');if(x.start===x.end)throw Error('Start and finish times are identical on '+ukDate(x.date)+'. Please enter the correct times.');if(!Number.isFinite(x.breaks)||x.breaks<0)throw Error('Enter a valid unpaid break.');let [ah,am]=x.start.split(':').map(Number),[bh,bm]=x.end.split(':').map(Number);let mins=(bh*60+bm)-(ah*60+am);if(mins<0)mins+=1440;if(x.breaks>=mins)throw Error('The unpaid break cannot equal or exceed the shift duration.');x.hours=(mins-x.breaks)/60}return rows}
  function journeys(){let rows=[...document.querySelectorAll('.exp-journey')].map(n=>({date:get(n,'jd'),home:get(n,'jh'),site:get(n,'js'),miles:get(n,'jm')})).filter(x=>x.date||x.home||x.site||x.miles);if(rows.length>7)throw Error('The Saturn template supports seven mileage rows per form.');for(let x of rows){if(!x.date||!x.home||!x.site||x.miles==='')throw Error('Complete the date, both postcodes and mileage for every journey.');if(!Number.isFinite(Number(x.miles))||Number(x.miles)<0)throw Error('Enter a valid return mileage.')}return rows}
@@ -487,7 +501,7 @@ renderShifts();
  }));
  result.push(await page(backgrounds[1],792,612,ctx=>{drawText(ctx,v('docName'),[60,67,185,34],{size:11})}));
  }else{
- if(!v('expName')||!v('expWeekEnd'))throw Error('Enter your name and week-ending date.');let rows=journeys();result.push(await page(backgrounds[2],595.3,841.89,ctx=>{
+ if(!v('expName')||!v('expWeekEnd'))throw Error('Enter your name and week-ending date.');let bounds=saturnWeekBounds(v('expWeekEnd'));if(v('expWeekEnd')!==bounds.last)throw Error('Saturn week ending must be a Thursday.');let rows=journeys();if(rows.some(r=>r.date<bounds.first||r.date>bounds.last))throw Error('A mileage date is outside the Friday–Thursday reporting week. Check your journey dates.');result.push(await page(backgrounds[2],595.3,841.89,ctx=>{
  let cells=[['expName',[72,197,226,22]],['expClient',[299,197,224,22]],['expAgency',[72,237,226,20]],['expServices',[299,288,224,29]],['expSite',[299,318,224,44]],['expOtherSites',[299,364,224,45]],['expDuration',[299,410,224,44]]];cells.forEach(([id,r])=>drawText(ctx,v(id),r,{size:11}));drawText(ctx,ukDate(v('expWeekEnd')),[299,237,224,20],{size:11});rows.forEach((r,i)=>{let y=515+i*22;[[72,112,ukDate(r.date)],[185,112,r.home.toUpperCase()],[298,112,r.site.toUpperCase()],[411,112,r.miles]].forEach(([x,w,t])=>drawText(ctx,t,[x,y,w,22],{size:10}))})}));
  result.push(await page(backgrounds[3],595.3,841.89,ctx=>{drawText(ctx,v('expSignature'),[72,92,225,21],{size:11});drawText(ctx,ukDate(v('expSignDate')),[299,92,224,21],{size:11})}));
  }
