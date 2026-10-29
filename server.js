@@ -51,12 +51,15 @@ async function db(resource, options = {}) {
   if (response.status === 204) return null;
   return response.json();
 }
-// Public store uses a manually maintained, server-authoritative products.json.
-// Stock starts at zero until the owner confirms quantities. Never trust client prices.
-function productsFromManualCatalog() {
-  const filename = path.join(__dirname, 'products.json');
-  const parsed = JSON.parse(fs.readFileSync(filename, 'utf8'));
-  if (!Array.isArray(parsed) || !parsed.length) throw Error('Manual catalogue is empty');
+// Store catalogue is maintained in GitHub products.json. The backend is the
+// authority for both storefront prices and Stripe checkout. No ephemeral writes.
+const CATALOG_REPO = (process.env.CATALOG_GITHUB_REPO || '').trim();
+const CATALOG_TOKEN = (process.env.CATALOG_GITHUB_TOKEN || '').trim();
+const CATALOG_BRANCH = (process.env.CATALOG_GITHUB_BRANCH || 'main').trim();
+const CATALOG_FILE = 'products.json';
+let catalogueWriteQueue = Promise.resolve();
+function validateCatalogue(parsed) {
+  if (!Array.isArray(parsed)) throw Error('Invalid product catalogue');
   const seen = new Set();
   return parsed.map(p => {
     if (!p || !Number.isSafeInteger(p.id) || p.id < 1 || seen.has(p.id) ||
@@ -64,18 +67,62 @@ function productsFromManualCatalog() {
         typeof p.category !== 'string' || !p.category.trim() ||
         !Number.isSafeInteger(p.price_pence) || p.price_pence < 1 ||
         !Number.isSafeInteger(p.stock_quantity) || p.stock_quantity < 0 ||
-        typeof p.is_active !== 'boolean') throw Error('Invalid manual catalogue entry');
+        typeof p.is_active !== 'boolean') throw Error('Invalid catalogue entry');
     seen.add(p.id);
     return p;
   });
 }
-async function productsFromDb(all = false) {
-  const where = all ? '' : '&is_active=eq.true';
-  return db('products?select=id,name,description,category,price_pence,stock_quantity,is_active,image_url&order=id.asc' + where);
+async function githubCatalogue(method, body) {
+  if (!CATALOG_TOKEN || !/^[\w.-]+\/[\w.-]+$/.test(CATALOG_REPO))
+    throw Error('GitHub catalogue editing is not configured');
+  const url = `https://api.github.com/repos/${CATALOG_REPO}/contents/${CATALOG_FILE}`;
+  const response = await fetch(url + (method === 'GET' ? '?ref=' + encodeURIComponent(CATALOG_BRANCH) : ''), {
+    method, headers: {
+      Authorization: `Bearer ${CATALOG_TOKEN}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(body ? {'Content-Type':'application/json'} : {})
+    }, body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!response.ok) {
+    console.error('Catalogue GitHub API HTTP', response.status);
+    throw Error('Catalogue storage unavailable (HTTP ' + response.status + ')');
+  }
+  return response.json();
+}
+async function readCatalogue() {
+  if (!CATALOG_TOKEN && !CATALOG_REPO) {
+    const local = JSON.parse(fs.readFileSync(path.join(__dirname,CATALOG_FILE),'utf8'));
+    return {products:validateCatalogue(local), sha:null, local:true};
+  }
+  const file = await githubCatalogue('GET');
+  if (file.encoding !== 'base64' || typeof file.content !== 'string') throw Error('Invalid catalogue response');
+  const parsed = JSON.parse(Buffer.from(file.content.replace(/\s/g,''),'base64').toString('utf8'));
+  return {products:validateCatalogue(parsed),sha:file.sha,local:false};
+}
+async function productsFromManualCatalog() { return (await readCatalogue()).products; }
+async function updateCatalogue(modify) {
+  // GitHub's SHA precondition prevents overwriting changes made in GitHub.
+  const work = async () => {
+    if (!CATALOG_TOKEN || !CATALOG_REPO) throw Error('Set CATALOG_GITHUB_TOKEN and CATALOG_GITHUB_REPO in Render');
+    const current = await readCatalogue();
+    const next = modify(current.products.map(p=>({...p})));
+    validateCatalogue(next);
+    await githubCatalogue('PUT', {
+      message:'Update Alkaline Online product catalogue via admin',
+      content:Buffer.from(JSON.stringify(next,null,2)+'\n','utf8').toString('base64'),
+      sha:current.sha,branch:CATALOG_BRANCH
+    });
+    return next;
+  };
+  const result = catalogueWriteQueue.then(work);
+  catalogueWriteQueue = result.catch(()=>{});
+  return result;
 }
 function validateProduct(p, partial = false) {
   if (!p || typeof p !== 'object' || Array.isArray(p)) throw Error('Invalid product');
-  const allowed = ['name','description','category','price_pence','stock_quantity','is_active','image_url'];
+  const allowed = ['name','description','category','price_pence','stock_quantity','is_active','image_url','emoji'];
   const keys = Object.keys(p);
   if (!keys.length || keys.some(k => !allowed.includes(k))) throw Error('Invalid product fields');
   if (!partial && (!keys.includes('name') || !keys.includes('price_pence') || !keys.includes('stock_quantity'))) throw Error('Missing product fields');
@@ -85,6 +132,7 @@ function validateProduct(p, partial = false) {
   if ('price_pence' in p && (!Number.isSafeInteger(p.price_pence) || p.price_pence < 1 || p.price_pence > 10000000)) throw Error('Invalid price');
   if ('stock_quantity' in p && (!Number.isSafeInteger(p.stock_quantity) || p.stock_quantity < 0 || p.stock_quantity > 1000000)) throw Error('Invalid stock quantity');
   if ('is_active' in p && typeof p.is_active !== 'boolean') throw Error('Invalid availability');
+  if ('emoji' in p && (typeof p.emoji !== 'string' || p.emoji.length > 16)) throw Error('Invalid emoji');
   if ('image_url' in p && p.image_url !== null && (typeof p.image_url !== 'string' || p.image_url.length > 1000 || (p.image_url && !/^https:\/\//.test(p.image_url)))) throw Error('Invalid image URL');
   return Object.fromEntries(keys.map(k => [k, typeof p[k] === 'string' ? p[k].trim() : p[k]]));
 }
@@ -141,7 +189,7 @@ const send=(res,status,obj)=>{res.writeHead(status,{'Content-Type':'application/
 http.createServer(async (req,res)=>{
 res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
 res.setHeader("Vary", "Origin");
-res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
+res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
 res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
 if (req.method === "OPTIONS") {
@@ -239,30 +287,50 @@ if (req.method === "OPTIONS") {
        return send(res,502,{error:'Could not save order status to Stripe'});
      }
    }
-       if (url.pathname === '/api/admin/products' && req.method === 'GET') {
-      try { return send(res,200,{products:await productsFromDb(true)}); }
-      catch { return send(res,503,{error:'Could not load products from Supabase'}); }
-    }
-    if (url.pathname === '/api/admin/products' && req.method === 'POST') {
-      if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
-      try {
-        const product = validateProduct(await jsonBody(req,8192));
-        const saved = await db('products?select=*',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(product)});
-        return send(res,201,{product:saved[0]});
-      } catch(e) { return send(res,400,{error:e.message}); }
-    }
-    const productMatch = url.pathname.match(/^\/api\/admin\/products\/(\d+)$/);
-    if (productMatch && req.method === 'PATCH') {
-      if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
-      try {
-        const id=Number(productMatch[1]);
-        if (!Number.isSafeInteger(id) || id < 1) throw Error('Invalid product ID');
-        const product=validateProduct(await jsonBody(req,8192),true);
-        const saved=await db(`products?id=eq.${id}&select=*`,{method:'PATCH',headers:{'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(product)});
-        if (!saved.length) return send(res,404,{error:'Product not found'});
-        return send(res,200,{product:saved[0]});
-      } catch(e) { return send(res,400,{error:e.message}); }
-    }
+   if (url.pathname === '/api/admin/products' && req.method === 'GET') {
+     try { return send(res,200,{products:await productsFromManualCatalog()}); }
+     catch(e) { return send(res,503,{error:e.message}); }
+   }
+   if (url.pathname === '/api/admin/products' && req.method === 'POST') {
+     if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
+     try {
+       const product = validateProduct(await jsonBody(req,8192));
+       let created;
+       await updateCatalogue(products => {
+         created={id:Math.max(0,...products.map(p=>p.id))+1,
+           description:'',category:'Uncategorised',emoji:'🌿',image_url:null,is_active:true,...product};
+         return [...products,created];
+       });
+       return send(res,201,{product:created});
+     } catch(e) { return send(res,/configured|unavailable|HTTP/.test(e.message)?503:400,{error:e.message}); }
+   }
+   const productMatch = url.pathname.match(/^\/api\/admin\/products\/(\d+)$/);
+   if (productMatch && req.method === 'PATCH') {
+     if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
+     try {
+       const id=Number(productMatch[1]);
+       if (!Number.isSafeInteger(id)||id<1) throw Error('Invalid product ID');
+       const changes=validateProduct(await jsonBody(req,8192),true);
+       let updated;
+       await updateCatalogue(products => {
+         const p=products.find(p=>p.id===id);
+         if(!p) throw Error('Product not found');
+         Object.assign(p,changes); updated=p; return products;
+       });
+       return send(res,200,{product:updated});
+     } catch(e) { return send(res,e.message==='Product not found'?404:/configured|unavailable|HTTP/.test(e.message)?503:400,{error:e.message}); }
+   }
+   if (productMatch && req.method === 'DELETE') {
+     if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
+     try {
+       const id=Number(productMatch[1]);
+       await updateCatalogue(products => {
+         if(!products.some(p=>p.id===id)) throw Error('Product not found');
+         return products.filter(p=>p.id!==id);
+       });
+       return send(res,200,{deleted:true});
+     } catch(e) { return send(res,e.message==='Product not found'?404:503,{error:e.message}); }
+   }
 return send(res,404,{error:'Not found'});
  }
  if (req.method === 'POST' && url.pathname === '/api/webhook') {
@@ -313,7 +381,7 @@ return send(res,404,{error:'Not found'});
 } 
  if(req.method==='GET' && url.pathname==='/api/health') return send(res,200,{status:'ok',service:'alkaline-online'});
    if(req.method==='GET' && url.pathname==='/api/products') {
-    try { return send(res,200,{products:productsFromManualCatalog().filter(p=>p.is_active)}); }
+    try { return send(res,200,{products:(await productsFromManualCatalog()).filter(p=>p.is_active)}); }
     catch (e) { console.error('Manual catalogue failed:', e.message); return send(res,503,{error:'Product catalogue temporarily unavailable'}); }
   }
   if(req.method==='POST' && url.pathname==='/api/orders')
@@ -337,7 +405,7 @@ if (req.method === 'POST' && url.pathname === '/api/checkout') {
       throw Error('Invalid basket');
     }
 
-    const available = productsFromManualCatalog().filter(p=>p.is_active);
+    const available = (await productsFromManualCatalog()).filter(p=>p.is_active);
     const line_items = items.map(item => {
       if (!Number.isSafeInteger(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 100) throw Error('Invalid item');
       const product = available.find(p => p.id === item.id);
