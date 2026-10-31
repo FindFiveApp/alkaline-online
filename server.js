@@ -68,6 +68,7 @@ function validateCatalogue(parsed) {
         !Number.isSafeInteger(p.price_pence) || p.price_pence < 1 ||
         !Number.isSafeInteger(p.stock_quantity) || p.stock_quantity < 0 ||
         typeof p.is_active !== 'boolean') throw Error('Invalid catalogue entry');
+    if (p.weight_variants !== undefined) validateWeightVariants(p.weight_variants);
     seen.add(p.id);
     return p;
   });
@@ -120,12 +121,21 @@ async function updateCatalogue(modify) {
   catalogueWriteQueue = result.catch(()=>{});
   return result;
 }
+const ROOT_WEIGHTS = [25,50,100,250,500];
+function validateWeightVariants(variants) {
+  if (!Array.isArray(variants) || variants.length !== ROOT_WEIGHTS.length) throw Error('Provide five root weight options');
+  for (let i=0;i<ROOT_WEIGHTS.length;i++) {
+    const v=variants[i];
+    if (!v || v.grams!==ROOT_WEIGHTS[i] || !Number.isSafeInteger(v.price_pence) || v.price_pence<1 || v.price_pence>10000000 || !Number.isSafeInteger(v.stock_quantity) || v.stock_quantity<0 || v.stock_quantity>1000000) throw Error('Invalid weight price or stock');
+  }
+}
 function validateProduct(p, partial = false) {
   if (!p || typeof p !== 'object' || Array.isArray(p)) throw Error('Invalid product');
-  const allowed = ['name','description','category','price_pence','stock_quantity','is_active','image_url','emoji'];
+  const allowed = ['name','description','category','price_pence','stock_quantity','is_active','image_url','emoji','weight_variants'];
   const keys = Object.keys(p);
   if (!keys.length || keys.some(k => !allowed.includes(k))) throw Error('Invalid product fields');
   if (!partial && (!keys.includes('name') || !keys.includes('price_pence') || !keys.includes('stock_quantity'))) throw Error('Missing product fields');
+  if ('weight_variants' in p && p.weight_variants !== null) validateWeightVariants(p.weight_variants);
   if ('name' in p && (typeof p.name !== 'string' || !p.name.trim() || p.name.length > 120)) throw Error('Invalid name');
   if ('description' in p && (typeof p.description !== 'string' || p.description.length > 1500)) throw Error('Invalid description');
   if ('category' in p && (typeof p.category !== 'string' || !p.category.trim() || p.category.length > 80)) throw Error('Invalid category');
@@ -315,7 +325,7 @@ if (req.method === "OPTIONS") {
        await updateCatalogue(products => {
          const p=products.find(p=>p.id===id);
          if(!p) throw Error('Product not found');
-         Object.assign(p,changes); updated=p; return products;
+         Object.assign(p,changes); if(p.weight_variants===null) delete p.weight_variants; updated=p; return products;
        });
        return send(res,200,{product:updated});
      } catch(e) { return send(res,e.message==='Product not found'?404:/configured|unavailable|HTTP/.test(e.message)?503:400,{error:e.message}); }
@@ -409,9 +419,14 @@ if (req.method === 'POST' && url.pathname === '/api/checkout') {
     const line_items = items.map(item => {
       if (!Number.isSafeInteger(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 100) throw Error('Invalid item');
       const product = available.find(p => p.id === item.id);
-      if (!product || product.stock_quantity < item.quantity) throw Error('Product unavailable or insufficient stock');
+      if (!product) throw Error('Product unavailable or insufficient stock');
+      const isRoot = Array.isArray(product.weight_variants);
+      if (isRoot && !ROOT_WEIGHTS.includes(item.grams)) throw Error('Select a valid root weight');
+      if (!isRoot && item.grams !== undefined) throw Error('Invalid item');
+      const variant = isRoot ? product.weight_variants.find(v=>v.grams===item.grams) : null;
+      if ((variant ? variant.stock_quantity : product.stock_quantity) < item.quantity) throw Error('Product unavailable or insufficient stock');
       return {
-        price_data: {currency:'gbp',product_data:{name:product.name},unit_amount:product.price_pence},
+        price_data: {currency:'gbp',product_data:{name:product.name+(variant ? ` — ${variant.grams}g` : '')},unit_amount:variant ? variant.price_pence : product.price_pence},
         quantity:item.quantity
       };
     });
@@ -430,7 +445,7 @@ if (req.method === 'POST' && url.pathname === '/api/checkout') {
     return send(res, 200, { url: session.url });
   } catch (error) {
     console.error('Checkout error:', error.message);
-    const known = ['Product unavailable or insufficient stock','Invalid basket','Invalid item'];
+    const known = ['Product unavailable or insufficient stock','Invalid basket','Invalid item','Select a valid root weight'];
     const message = known.includes(error.message) ? error.message : 'Checkout temporarily unavailable: unable to verify products or start payment';
     return send(res, known.includes(error.message) ? 400 : 503, {error: message});
   }
