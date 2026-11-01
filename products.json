@@ -116,5 +116,43 @@
         "stock_quantity": 0
       }
     ]
+  },
+  {
+    "id": 10,
+    "description": "Naturally dried burdock root, cut into pieces and suitable for preparing herbal infusions and decoctions.",
+    "category": "Root Product",
+    "emoji": "🌿",
+    "image_url": "https://raw.githubusercontent.com/FindFiveApp/alkaline-online/main/images/burdock-root.png",
+    "is_active": true,
+    "name": "Burdock Root",
+    "price_pence": 1500,
+    "stock_quantity": 50,
+    "weight_variants": [
+      {
+        "grams": 25,
+        "price_pence": 1500,
+        "stock_quantity": 10
+      },
+      {
+        "grams": 50,
+        "price_pence": 2599,
+        "stock_quantity": 10
+      },
+      {
+        "grams": 100,
+        "price_pence": 4499,
+        "stock_quantity": 10
+      },
+      {
+        "grams": 250,
+        "price_pence": 15000,
+        "stock_quantity": 10
+      },
+      {
+        "grams": 500,
+        "price_pence": 24900,
+        "stock_quantity": 10
+      }
+    ]
   }
 ]
