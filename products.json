@@ -84,7 +84,7 @@
     "description": "Naturally dried dandelion root, cut into pieces and suitable for preparing herbal infusions and decoctions.",
     "category": "Root Product",
     "emoji": "🌿",
-    "image_url": null,
+    "image_url": "https://raw.githubusercontent.com/FindFiveApp/alkaline-online/main/images/dandelion-root.png",
     "is_active": true,
     "name": "Dandelion Root",
     "price_pence": 1500,
