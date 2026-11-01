@@ -78,5 +78,43 @@
     "emoji": "🥣",
     "stock_quantity": 10,
     "is_active": true
+  },
+  {
+    "id": 9,
+    "description": "Naturally dried dandelion root, cut into pieces and suitable for preparing herbal infusions and decoctions.",
+    "category": "Root Product",
+    "emoji": "🌿",
+    "image_url": null,
+    "is_active": true,
+    "name": "Dandelion Root",
+    "price_pence": 1500,
+    "stock_quantity": 8,
+    "weight_variants": [
+      {
+        "grams": 25,
+        "price_pence": 1500,
+        "stock_quantity": 2
+      },
+      {
+        "grams": 50,
+        "price_pence": 2599,
+        "stock_quantity": 2
+      },
+      {
+        "grams": 100,
+        "price_pence": 4499,
+        "stock_quantity": 2
+      },
+      {
+        "grams": 250,
+        "price_pence": 20000,
+        "stock_quantity": 2
+      },
+      {
+        "grams": 500,
+        "price_pence": 35000,
+        "stock_quantity": 0
+      }
+    ]
   }
 ]
