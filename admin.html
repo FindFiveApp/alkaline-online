@@ -94,6 +94,34 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 @media(max-width:360px){main{padding-left:12px;padding-right:12px}.card{padding:15px}.stats .card{padding:12px 10px}.tabs button{font-size:11px}.product .actions button{padding:9px 10px}}
 @media(min-width:601px){main{padding-top:28px}.tabs button{font-size:14px}.formgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
+
+/* Improvement 1: order-management readability, iPhone only.
+   Does not alter the fixed header, API calls, fulfilment values or save handlers. */
+#ordersPanel .stats{margin-top:8px;margin-bottom:18px}
+#ordersPanel .stats .card{background:#fff;border:1px solid #dfe8de}
+#ordersPanel>.card{padding:16px 14px}
+#ordersPanel .orderhead{align-items:center;gap:8px;margin-bottom:13px}
+#ordersPanel .orderhead h2{margin:0;font-size:22px}
+#ordersPanel #refresh{min-height:42px;padding:10px 15px}
+#orders{display:grid;gap:14px;margin-top:12px}
+#orders .order{min-width:0;margin:0;padding:17px 15px;border:1px solid #e0e8dd;border-radius:15px;background:#fff;box-shadow:0 3px 12px rgba(28,57,35,.045)}
+#orders .order:first-child{border-top:1px solid #e0e8dd}
+#orders .orderhead{align-items:flex-start;flex-wrap:nowrap;margin-bottom:14px}
+#orders .orderhead>div{min-width:0}
+#orders .orderhead strong{font-size:23px;letter-spacing:-.4px;color:#234632;line-height:1.15;display:block;margin-bottom:5px}
+#orders .tag{flex-shrink:0;padding:7px 11px;font-size:12px}
+#orders .order-customer{font-size:16px;font-weight:700;color:#263f2e;line-height:1.35;margin:8px 0 4px;overflow-wrap:anywhere}
+#orders .order-email,#orders .order-address{font-size:13px;line-height:1.55;overflow-wrap:anywhere;margin:5px 0}
+#orders .order-address{padding:11px 12px;background:#f5f7f1;border:1px solid #e7eee3;border-radius:10px;color:#435d49}
+#orders .order-items{margin:13px 0;padding:11px 12px 11px 29px;background:#f9faf7;border-radius:10px;border:1px solid #eef1ea;line-height:1.55}
+#orders .order-items li{overflow-wrap:anywhere;margin:3px 0}
+#orders .fulfilment-row{display:block;margin:16px 0 13px;padding:14px;background:#f1f6ef;border-radius:12px;border:1px solid #e0eadd}
+#orders .fulfilment-row label{display:block;font-weight:700;font-size:13px;color:#31543b}
+#orders .fulfilment-row select{display:block;width:100%;max-width:none;min-height:46px;margin:8px 0 4px;font-size:16px;background:#fff;border-color:#a6bda8}
+#orders .fulfilment-row>span{display:block;margin-top:6px;overflow-wrap:anywhere}
+#orders .order-session{font-size:11px;line-height:1.5;overflow-wrap:anywhere;padding-top:11px;border-top:1px solid #e9eee7;color:#6a7b6c}
+#ordersPanel>p.muted.small{font-size:12px;line-height:1.55;padding:0 2px}
+@media(max-width:390px){#ordersPanel>.card{padding:14px 11px}#orders .order{padding:15px 12px}#orders .orderhead strong{font-size:21px}}
 </style></head><body>
 <header><div class="brand">✳ Alkaline Online</div><button id="logout" hidden>Sign out</button></header>
 <main><section id="login" class="card"><h1>Admin sign in</h1><p class="muted">Private store management. Sign in with your administrator password.</p><form id="loginForm"><label for="password">Admin password</label><input id="password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form><p id="loginError" class="error" role="alert"></p></section>
@@ -162,15 +190,15 @@ async function loadOrders() {
         o.payment_status === 'paid' ? 'Paid' : (o.payment_status || 'Unknown'));
       head.append(left, badge);
       section.append(head);
-      section.append(el('div', 'small', o.customer_name || 'Customer name unavailable'));
-      if (o.customer_email) section.append(el('div', 'muted small', o.customer_email));
+      section.append(el('div', 'order-customer', o.customer_name || 'Customer name unavailable'));
+      if (o.customer_email) section.append(el('div', 'muted small order-email', o.customer_email));
       if (o.shipping_address) {
         const a = o.shipping_address;
         section.append(el('div', 'muted small',
           [o.shipping_name, a.line1, a.line2, a.city, a.postal_code, a.country]
             .filter(Boolean).join(', ')));
       }
-      const ul = el('ul', 'small');
+      const ul = el('ul', 'small order-items');
       for (const item of o.items || []) {
         ul.append(el('li', '', `${item.description || 'Item'} × ${item.quantity || 1}`));
       }
@@ -210,7 +238,7 @@ async function loadOrders() {
         row.append(label, note);
         section.append(row);
       }
-      section.append(el('div', 'muted small', 'Stripe session: ' + o.id));
+      section.append(el('div', 'muted small order-session', 'Stripe session: ' + o.id));
       container.append(section);
     }
   } catch (e) {
