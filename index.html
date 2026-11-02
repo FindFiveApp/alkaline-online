@@ -13,7 +13,7 @@ button:disabled{opacity:.58;cursor:not-allowed}
 :root{--ao-header-height:76px;--ao-footer-height:140px}
 body{padding-top:var(--ao-header-height);padding-bottom:var(--ao-footer-height)}
 header{position:fixed;top:0;left:0;right:0;z-index:20;padding-top:max(18px,env(safe-area-inset-top));}
-footer{position:fixed;left:0;right:0;bottom:0;z-index:15;margin-top:0;padding-bottom:max(30px,env(safe-area-inset-bottom));}
+footer{margin-top:0}
 html{scroll-padding-top:calc(var(--ao-header-height) + 12px);scroll-padding-bottom:calc(var(--ao-footer-height) + 12px)}
 @media(max-width:500px){footer{padding-top:14px;padding-bottom:max(14px,env(safe-area-inset-bottom))}footer .brand{font-size:19px}footer p{margin:5px 0}footer small{font-size:11px}}
 
@@ -42,19 +42,18 @@ footer small{font-size:10px;line-height:1.2}
 .product .details>.muted:first-child{display:block;position:static;margin:0 0 7px;line-height:1.35}
 @media(max-width:600px){.product .art{height:145px;flex-basis:145px}}
 .basket-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.basket-remove{background:#f6eae7;color:#922e26;font-size:12px;padding:8px 11px}.basket-continue{width:100%;margin:12px 0 6px;background:#e8ede3;color:#254d35}.basket-feedback{position:fixed;left:50%;bottom:calc(var(--ao-footer-height) + 16px);transform:translateX(-50%);background:#254d35;color:white;padding:10px 16px;border-radius:20px;z-index:50;box-shadow:0 5px 20px #0003;font-size:14px;text-align:center;max-width:90%;pointer-events:none}.root-weight{width:100%;margin:8px 0 0;padding:10px;border:1px solid #cbd6c8;border-radius:10px;background:#fff;color:#254d35;font-size:16px;min-width:0}.details .price{margin-top:auto} 
-/* iPhone Safari: keep storefront footer anchored after closing basket.
-   Avoid toggling body overflow, which can shift fixed chrome on iOS. */
+
+/* Single final footer positioning rule. Keep layout styles above intact. */
 body > footer{
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  width:100%;
-  margin:0;
-  z-index:15;
-  -webkit-transform:translateZ(0);
-  transform:translateZ(0);
-  backface-visibility:hidden;
+ position:fixed !important;
+ left:0 !important;
+ right:0 !important;
+ bottom:var(--ao-visual-bottom,0px) !important;
+ width:100%;
+ z-index:15;
+ margin:0 !important;
+ transform:none !important;
+ -webkit-transform:none !important;
 }
 </style></head><body><header><div class="brand">✳ Alkaline Online</div><button onclick="openCart()">Basket (<span id="count">0</span>)</button></header><section class="hero"><div class="eyebrow">Nature's everyday essentials</div><h1>Plant-based goodness, thoughtfully selected.</h1><p>Discover herbs, plant-based foods and everyday natural essentials. As an independent sole-trader business, we prepare orders with care.</p><button onclick="document.getElementById('shop').scrollIntoView({behavior:'smooth'})">Explore the collection</button><div class="dispatch-banner"><strong>Plan ahead for your order</strong><p>Every order requires 24–48 hours of preparation before dispatch. Please place orders in advance, especially if you need your items by a particular date. Delivery time is additional.</p></div></section><main id="shop"><div class="eyebrow">Our collection</div><h2>Shop naturally</h2><div class="filters" id="filters"></div><div class="grid" id="products"></div><p class="note" id="api-status" role="status">Checking product catalogue connection…</p><p class="note">Product availability is based on manually maintained inventory. All orders require 24–48 hours before dispatch.</p></main><footer><div class="brand">✳ Alkaline Online</div><p>Plant-based living, made simple.</p><small>© 2026 Alkaline Online</small></footer><div class="drawer" id="drawer"><div class="panel"><button class="close" onclick="closeCart()">✕ Close</button><h2>Your basket</h2><div id="cartlines"></div><h3 id="total"></h3><button class="basket-continue" type="button" onclick="closeCart()">Continue shopping</button><form id="order" onsubmit="submitOrder(event)"><h2>Delivery & contact details</h2><p class="dispatch-checkout"><strong>Dispatch notice:</strong> All orders require 24–48 hours before dispatch. Delivery time is additional. Please order in advance.</p><label class="field"><input type="checkbox" required style="width:auto;margin-right:8px">I understand my order requires 24–48 hours before dispatch.</label><label class="field">Full name<input name="name" autocomplete="name" required></label><label class="field">Email address<input name="email" type="email" autocomplete="email" required></label><label class="field">Phone number<input name="phone" type="tel" autocomplete="tel" required></label><label class="field">Delivery address<input name="address" autocomplete="street-address" required></label><label class="field">Town or city<input name="city" autocomplete="address-level2" required></label><label class="field">Postcode<input name="postcode" autocomplete="postal-code" required></label><label class="field">Order notes<textarea name="notes" placeholder="Optional delivery instructions"></textarea></label><button class="full" type="submit">Proceed to secure payment</button><p class="note">You will be redirected to Stripe for secure payment. No payment is taken on this page.</p></form><div id="message" role="status"></div></div></div><div id="basket-feedback" role="status" aria-live="polite" hidden></div><script>const products=[];let category='All',cart={},catalogueReady=false;const money=n=>'£'+n.toFixed(2);const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const key=(id,grams)=>grams?`${id}:${grams}`:String(id);
@@ -87,5 +86,24 @@ async function connectCatalogue(){const status=document.getElementById('api-stat
  if(typeof ResizeObserver!=='undefined'){
   const observer=new ResizeObserver(update);observer.observe(top);observer.observe(bottom);
  }else window.addEventListener('resize',update);
+})();
+
+/* Re-anchor fixed footer after Safari toolbar/checkout viewport changes. */
+(function anchorFooterToVisualViewport(){
+ const vv=window.visualViewport;
+ if(!vv)return;
+ let frame=0;
+ const update=()=>{
+  cancelAnimationFrame(frame);
+  frame=requestAnimationFrame(()=>{
+   const offset=Math.max(0,window.innerHeight-vv.offsetTop-vv.height);
+   document.documentElement.style.setProperty('--ao-visual-bottom',offset.toFixed(2)+'px');
+  });
+ };
+ vv.addEventListener('resize',update,{passive:true});
+ vv.addEventListener('scroll',update,{passive:true});
+ window.addEventListener('pageshow',update);
+ window.addEventListener('orientationchange',update);
+ update();
 })();
 </script></body></html>
