@@ -5,6 +5,21 @@
 
 /* Stage 1 mobile dashboard */
 body{min-height:100svh}header{position:sticky;top:0;z-index:20;padding:14px 18px;box-shadow:0 2px 12px #142e1b15}main{padding:20px 14px 80px}.tabs{position:sticky;top:57px;z-index:15;background:#f7f8f3;padding:10px 0;margin:12px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.tabs button{padding:12px 6px;font-size:13px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stats .card{margin:0;padding:16px}.stats .card:last-child{grid-column:auto}.card{padding:18px;margin:12px 0}.overview-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.overview-actions button{text-align:left;min-height:76px}.overview-actions button.secondary{border:1px solid #dce7d8}.overview-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.overview-head button{padding:9px 12px}.overview-hint{border-left:3px solid #d6b876;padding:12px 14px;background:#fff9e9;border-radius:8px;font-size:13px;line-height:1.5}.metric-note{font-size:11px;color:#617365;margin-top:4px}.stock-line{padding:11px 0;border-top:1px solid #e6ece4;display:flex;justify-content:space-between;gap:8px;font-size:14px}.stock-line:first-child{border-top:0}.stock-line strong{color:#8a5619}.dashboard-message{min-height:18px;font-size:13px}.section-heading{margin:0 0 10px;font-size:22px}@media(max-width:380px){.brand{font-size:17px}.tabs button{font-size:12px}.stats .card{padding:12px}.big{font-size:24px}} 
+
+/* Stage 1.1: keep the admin header visible while dashboard content scrolls.
+   Sticky stays in document flow, avoiding content overlap and iOS fixed-body scroll bugs. */
+html { scroll-padding-top: 90px; }
+body > header {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  box-shadow: 0 2px 10px rgba(20,45,28,.12);
+}
+@supports (padding: max(0px)) {
+  body > header { padding-top: max(14px, env(safe-area-inset-top, 0px)); }
+}
 </style></head><body>
 <header><div class="brand">✳ Alkaline Online</div><button id="logout" hidden>Sign out</button></header>
 <main><section id="login" class="card"><h1>Admin sign in</h1><p class="muted">Private store management. Sign in with your administrator password.</p><form id="loginForm"><label for="password">Admin password</label><input id="password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form><p id="loginError" class="error" role="alert"></p></section>
