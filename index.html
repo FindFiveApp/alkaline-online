@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#254d35"><title>Alkaline Online | Herbs & Organic Foods</title><style>:root{font-family:system-ui,-apple-system,sans-serif;color:#20382b;background:#faf9f3}*{box-sizing:border-box}body{margin:0}header{background:#254d35;color:white;padding:18px 5%;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:2}.brand{font-family:Georgia,serif;font-size:25px}button{cursor:pointer;border:0;border-radius:24px;padding:12px 19px;background:#254d35;color:white;font-weight:650}header button{background:#e9eddd;color:#254d35}.hero{padding:65px 7%;background:linear-gradient(115deg,#e1e9d6,#faf8ee);text-align:center}.eyebrow{letter-spacing:3px;text-transform:uppercase;font-size:12px}h1{font:clamp(36px,7vw,68px) Georgia,serif;max-width:760px;margin:18px auto}p{line-height:1.6}.hero p{max-width:580px;margin:0 auto 24px}main{max-width:1150px;margin:auto;padding:32px 5%}h2{font:32px Georgia,serif}.filters{display:flex;gap:8px;overflow:auto;padding-bottom:18px}.filters button{white-space:nowrap;background:#e8ede3;color:#254d35}.filters .active{background:#254d35;color:white}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}.product{border:1px solid #e1e5da;border-radius:18px;background:white;overflow:hidden;display:flex;flex-direction:column;height:100%}.art{height:175px;display:grid;place-items:center;background:linear-gradient(145deg,#dce8d5,#f5e9cd);font-size:72px}.details{padding:17px;display:flex;flex-direction:column;flex:1;min-height:0}.details .price{margin-top:auto;padding-top:12px}.details button{flex-shrink:0}.details h3{margin:4px 0}.muted{color:#637264;font-size:13px}.price{font-weight:750;font-size:20px}.details button{width:100%}.drawer{display:none;position:fixed;inset:0;background:#14271ba8;z-index:5;overflow:auto;padding:15px}.drawer.open{display:block}.panel{background:#fff;max-width:520px;margin:20px auto;padding:25px;border-radius:22px}.panel h2{margin-top:0}.line{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #eee}.line button{padding:6px 10px}.field{display:block;margin:13px 0;font-weight:600;font-size:14px}input,textarea{width:100%;padding:13px;border:1px solid #cbd6c8;border-radius:9px;margin-top:5px;font:inherit}textarea{min-height:75px}.full{width:100%;margin-top:15px}.note{font-size:12px;color:#596b5b}.close{float:right;background:#e8ede3;color:#254d35} .dispatch-banner{max-width:690px;margin:28px auto 0;padding:18px 22px;border-radius:16px;background:#fffdf6;border:1px solid #c9d5bd;text-align:left}.dispatch-banner p{margin:5px 0 0;font-size:14px}.dispatch-checkout{padding:12px;border-radius:10px;background:#edf3e8;font-size:14px}footer{text-align:center;background:#254d35;color:white;padding:30px;margin-top:45px}@media(max-width:500px){.hero{padding:48px 7%}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.art{height:120px;font-size:55px}.details{padding:12px}.details h3{font-size:15px}.details button{padding:10px 5px;font-size:12px}}
 /* Mobile-first checkout overlay: scrollable, accessible and above the catalogue. */
-html.cart-open{overflow:hidden}body.cart-open{overflow:visible}
+body.cart-open{overflow:visible}
 .drawer{z-index:1000;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:max(12px,env(safe-area-inset-top)) 12px max(20px,env(safe-area-inset-bottom));}
 .drawer.open{display:flex;align-items:flex-start;justify-content:center}
 .panel{width:100%;margin:0 auto 20px;max-height:none;box-shadow:0 18px 60px #07180c40;overflow:visible}
@@ -56,8 +56,11 @@ body > footer{
  -webkit-transform:none !important;
 }
 
+/* Basket scroll isolation: do not fix or transform body (keeps footer stable). */
+html.ao-basket-open{overscroll-behavior:none}
+.drawer{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 /* Prevent Safari rubber-band scrolling past the start of the storefront. */
-html,body{overscroll-behavior-y:none}.drawer{overscroll-behavior-y:contain}
+html,body{overscroll-behavior-y:none}
 </style></head><body><header><div class="brand">✳ Alkaline Online</div><button onclick="openCart()">Basket (<span id="count">0</span>)</button></header><section class="hero"><div class="eyebrow">Nature's everyday essentials</div><h1>Plant-based goodness, thoughtfully selected.</h1><p>Discover herbs, plant-based foods and everyday natural essentials. As an independent sole-trader business, we prepare orders with care.</p><button onclick="document.getElementById('shop').scrollIntoView({behavior:'smooth'})">Explore the collection</button><div class="dispatch-banner"><strong>Plan ahead for your order</strong><p>Every order requires 24–48 hours of preparation before dispatch. Please place orders in advance, especially if you need your items by a particular date. Delivery time is additional.</p></div></section><main id="shop"><div class="eyebrow">Our collection</div><h2>Shop naturally</h2><div class="filters" id="filters"></div><div class="grid" id="products"></div><p class="note" id="api-status" role="status">Checking product catalogue connection…</p><p class="note">Product availability is based on manually maintained inventory. All orders require 24–48 hours before dispatch.</p></main><footer><div class="brand">✳ Alkaline Online</div><p>Plant-based living, made simple.</p><small>© 2026 Alkaline Online</small></footer><div class="drawer" id="drawer"><div class="panel"><button class="close" onclick="closeCart()">✕ Close</button><h2>Your basket</h2><div id="cartlines"></div><h3 id="total"></h3><button class="basket-continue" type="button" onclick="closeCart()">Continue shopping</button><form id="order" onsubmit="submitOrder(event)"><h2>Delivery & contact details</h2><p class="dispatch-checkout"><strong>Dispatch notice:</strong> All orders require 24–48 hours before dispatch. Delivery time is additional. Please order in advance.</p><label class="field"><input type="checkbox" required style="width:auto;margin-right:8px">I understand my order requires 24–48 hours before dispatch.</label><label class="field">Full name<input name="name" autocomplete="name" required></label><label class="field">Email address<input name="email" type="email" autocomplete="email" required></label><label class="field">Phone number<input name="phone" type="tel" autocomplete="tel" required></label><label class="field">Delivery address<input name="address" autocomplete="street-address" required></label><label class="field">Town or city<input name="city" autocomplete="address-level2" required></label><label class="field">Postcode<input name="postcode" autocomplete="postal-code" required></label><label class="field">Order notes<textarea name="notes" placeholder="Optional delivery instructions"></textarea></label><button class="full" type="submit">Proceed to secure payment</button><p class="note">You will be redirected to Stripe for secure payment. No payment is taken on this page.</p></form><div id="message" role="status"></div></div></div><div id="basket-feedback" role="status" aria-live="polite" hidden></div><script>const products=[];let category='All',cart={},catalogueReady=false;const money=n=>'£'+n.toFixed(2);const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const key=(id,grams)=>grams?`${id}:${grams}`:String(id);
 function selected(p){const select=document.getElementById('weight-'+p.id);return select?Number(select.value):null}
@@ -68,29 +71,20 @@ function chooseCategory(i){category=['All',...new Set(products.map(p=>p.c))][i]|
 let basketFeedbackTimer;function notifyBasket(message){const el=document.getElementById('basket-feedback');el.textContent=message;el.hidden=false;el.classList.add('basket-feedback');clearTimeout(basketFeedbackTimer);basketFeedbackTimer=setTimeout(()=>{el.hidden=true},2200)}
 function resetCheckoutMessage(){document.getElementById('message').textContent=''}
 function add(id){const p=products.find(p=>p.id===id);if(!catalogueReady||!p)return;const grams=p.variants?selected(p):null;const v=p.variants?option(p,grams):null;const stock=v?v.stock_quantity:p.stock;const k=key(id,grams);if(!stock||((cart[k]?.quantity||0)>=stock)){alert('This item is out of stock or has reached its available quantity.');return}cart[k]={id,grams,quantity:(cart[k]?.quantity||0)+1};render();notifyBasket('Added to basket — '+p.n+(grams?' ('+grams+'g)':''))}
-let storefrontScrollY=0;
 function openCart(){
  const drawer=document.getElementById('drawer');
- if(drawer.classList.contains('open'))return;
- storefrontScrollY=Math.max(0,window.scrollY);
- document.documentElement.classList.add('cart-open');
- document.body.classList.add('cart-open');
  drawer.classList.add('open');
  drawer.scrollTop=0;
- resetCheckoutMessage();
- renderCart();
+ document.documentElement.classList.add('ao-basket-open');
+ resetCheckoutMessage();renderCart();
 }
 function closeCart(){
  const drawer=document.getElementById('drawer');
- if(drawer.contains(document.activeElement)&&document.activeElement.blur)document.activeElement.blur();
+ if(drawer.contains(document.activeElement) && document.activeElement.blur)document.activeElement.blur();
  drawer.classList.remove('open');
  drawer.scrollTop=0;
- document.documentElement.classList.remove('cart-open');
- document.body.classList.remove('cart-open');
+ document.documentElement.classList.remove('ao-basket-open');
  resetCheckoutMessage();
- const y=storefrontScrollY;
- window.scrollTo(0,y);
- requestAnimationFrame(()=>window.scrollTo({top:y,left:0,behavior:'instant'}));
 }
 function change(k,d){const item=cart[k],p=products.find(p=>p.id===item?.id);if(!item||!p)return;const v=item.grams?option(p,item.grams):null;if(d>0&&item.quantity>=(v?v.stock_quantity:p.stock))return;item.quantity+=d;if(item.quantity<=0)delete cart[k];resetCheckoutMessage();render();renderCart()}
 function removeItem(k){if(!Object.prototype.hasOwnProperty.call(cart,k))return;delete cart[k];resetCheckoutMessage();render();renderCart()}
@@ -113,6 +107,8 @@ async function connectCatalogue(){const status=document.getElementById('api-stat
  }else window.addEventListener('resize',update);
 })();
 
+/* Footer stays at the layout viewport bottom; no visualViewport repositioning. */
+
 /* iOS Safari fallback: prevent downward pull beyond the page's true top.
    Normal scrolling, basket scrolling, and form controls remain untouched. */
 (function preventTopRubberBand(){
@@ -123,7 +119,7 @@ async function connectCatalogue(){const status=document.getElementById('api-stat
  document.addEventListener('touchmove',function(e){
   if(!e.cancelable||e.touches.length!==1)return;
   if(document.getElementById('drawer').classList.contains('open')){
-   if(!e.target.closest('#drawer'))e.preventDefault();
+   if(!e.target.closest('#drawer .panel'))e.preventDefault();
    return;
   }
   if(e.target.closest('input,textarea,select,[contenteditable="true"]'))return;
@@ -131,10 +127,9 @@ async function connectCatalogue(){const status=document.getElementById('api-stat
   if(pullingDown && window.scrollY<=0)e.preventDefault();
  },{passive:false});
 })();
-
 window.addEventListener('pageshow',()=>{
+ document.documentElement.classList.remove('ao-basket-open');
  const drawer=document.getElementById('drawer');
- if(drawer.classList.contains('open'))closeCart();
- else {document.documentElement.classList.remove('cart-open');document.body.classList.remove('cart-open');}
+ drawer.classList.remove('open');
 });
 </script></body></html>
