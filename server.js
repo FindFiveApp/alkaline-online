@@ -51,8 +51,13 @@ async function db(resource, options = {}) {
   if (response.status === 204) return null;
   return response.json();
 }
-// Supabase is the single source of truth for products and checkout prices.
-// Keep products.json in GitHub as a historical rollback snapshot, not an active store.
+// Store catalogue is maintained in GitHub products.json. The backend is the
+// authority for both storefront prices and Stripe checkout. No ephemeral writes.
+const CATALOG_REPO = (process.env.CATALOG_GITHUB_REPO || '').trim();
+const CATALOG_TOKEN = (process.env.CATALOG_GITHUB_TOKEN || '').trim();
+const CATALOG_BRANCH = (process.env.CATALOG_GITHUB_BRANCH || 'main').trim();
+const CATALOG_FILE = 'products.json';
+let catalogueWriteQueue = Promise.resolve();
 function validateCatalogue(parsed) {
   if (!Array.isArray(parsed)) throw Error('Invalid product catalogue');
   const seen = new Set();
@@ -63,17 +68,58 @@ function validateCatalogue(parsed) {
         !Number.isSafeInteger(p.price_pence) || p.price_pence < 1 ||
         !Number.isSafeInteger(p.stock_quantity) || p.stock_quantity < 0 ||
         typeof p.is_active !== 'boolean') throw Error('Invalid catalogue entry');
-    if (p.weight_variants != null) validateWeightVariants(p.weight_variants);
+    if (p.weight_variants !== undefined) validateWeightVariants(p.weight_variants);
     seen.add(p.id);
     return p;
   });
 }
-async function productsFromManualCatalog() {
-  const rows = await db('products?select=id,name,description,category,price_pence,stock_quantity,is_active,image_url,emoji,weight_variants&order=id.asc');
-  return validateCatalogue(rows);
+async function githubCatalogue(method, body) {
+  if (!CATALOG_TOKEN || !/^[\w.-]+\/[\w.-]+$/.test(CATALOG_REPO))
+    throw Error('GitHub catalogue editing is not configured');
+  const url = `https://api.github.com/repos/${CATALOG_REPO}/contents/${CATALOG_FILE}`;
+  const response = await fetch(url + (method === 'GET' ? '?ref=' + encodeURIComponent(CATALOG_BRANCH) : ''), {
+    method, headers: {
+      Authorization: `Bearer ${CATALOG_TOKEN}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(body ? {'Content-Type':'application/json'} : {})
+    }, body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!response.ok) {
+    console.error('Catalogue GitHub API HTTP', response.status);
+    throw Error('Catalogue storage unavailable (HTTP ' + response.status + ')');
+  }
+  return response.json();
 }
-async function dbProductWrite(method, resource, payload) {
-  return db(resource, {method, headers:{'Content-Type':'application/json',Prefer:'return=representation'}, body:JSON.stringify(payload)});
+async function readCatalogue() {
+  if (!CATALOG_TOKEN && !CATALOG_REPO) {
+    const local = JSON.parse(fs.readFileSync(path.join(__dirname,CATALOG_FILE),'utf8'));
+    return {products:validateCatalogue(local), sha:null, local:true};
+  }
+  const file = await githubCatalogue('GET');
+  if (file.encoding !== 'base64' || typeof file.content !== 'string') throw Error('Invalid catalogue response');
+  const parsed = JSON.parse(Buffer.from(file.content.replace(/\s/g,''),'base64').toString('utf8'));
+  return {products:validateCatalogue(parsed),sha:file.sha,local:false};
+}
+async function productsFromManualCatalog() { return (await readCatalogue()).products; }
+async function updateCatalogue(modify) {
+  // GitHub's SHA precondition prevents overwriting changes made in GitHub.
+  const work = async () => {
+    if (!CATALOG_TOKEN || !CATALOG_REPO) throw Error('Set CATALOG_GITHUB_TOKEN and CATALOG_GITHUB_REPO in Render');
+    const current = await readCatalogue();
+    const next = modify(current.products.map(p=>({...p})));
+    validateCatalogue(next);
+    await githubCatalogue('PUT', {
+      message:'Update Alkaline Online product catalogue via admin',
+      content:Buffer.from(JSON.stringify(next,null,2)+'\n','utf8').toString('base64'),
+      sha:current.sha,branch:CATALOG_BRANCH
+    });
+    return next;
+  };
+  const result = catalogueWriteQueue.then(work);
+  catalogueWriteQueue = result.catch(()=>{});
+  return result;
 }
 const ROOT_WEIGHTS = [25,50,100,250,500];
 function validateWeightVariants(variants) {
@@ -255,41 +301,49 @@ if (req.method === "OPTIONS") {
      try { return send(res,200,{products:await productsFromManualCatalog()}); }
      catch(e) { return send(res,503,{error:e.message}); }
    }
-       if (url.pathname === '/api/admin/products' && req.method === 'POST') {
-      if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
-      try {
-        const product=validateProduct(await jsonBody(req,8192));
-        const defaults={description:'',category:'Uncategorised',emoji:'🌿',image_url:null,is_active:true};
-        const rows=await dbProductWrite('POST','products?select=*',[{...defaults,...product}]);
-        return send(res,201,{product:rows[0]});
-      } catch(e) {console.error('Product creation failed:',e.message);return send(res, /Supabase|connection|HTTP/.test(e.message)?503:400,{error:/Supabase|connection|HTTP/.test(e.message)?'Product storage unavailable':e.message});}
-    }
-    const productMatch=url.pathname.match(/^\/api\/admin\/products\/(\d+)$/);
-    if (productMatch && req.method === 'PATCH') {
-      if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
-      try {
-        const id=Number(productMatch[1]);
-        if (!Number.isSafeInteger(id)||id<1) throw Error('Invalid product ID');
-        const changes=validateProduct(await jsonBody(req,8192),true);
-        const rows=await dbProductWrite('PATCH','products?id=eq.'+id+'&select=*',changes);
-        if (!rows.length) return send(res,404,{error:'Product not found'});
-        return send(res,200,{product:rows[0]});
-      } catch(e) {console.error('Product update failed:',e.message);return send(res,/Supabase|connection|HTTP/.test(e.message)?503:400,{error:/Supabase|connection|HTTP/.test(e.message)?'Product storage unavailable':e.message});}
-    }
-    if (productMatch && req.method === 'DELETE') {
-      if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
-      try {
-        const id=Number(productMatch[1]);
-        if (!Number.isSafeInteger(id)||id<1) return send(res,400,{error:'Invalid product ID'});
-        // Soft-delete preserves product IDs for order history and future reconciliation.
-        const rows=await dbProductWrite('PATCH','products?id=eq.'+id+'&select=*',{is_active:false});
-        if (!rows.length) return send(res,404,{error:'Product not found'});
-        return send(res,200,{deleted:true,archived:true});
-      } catch(e) {console.error('Product archive failed:',e.message);return send(res,503,{error:'Product storage unavailable'});}
-    }
- return send(res,404,{error:'Not found'});
+   if (url.pathname === '/api/admin/products' && req.method === 'POST') {
+     if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
+     try {
+       const product = validateProduct(await jsonBody(req,8192));
+       let created;
+       await updateCatalogue(products => {
+         created={id:Math.max(0,...products.map(p=>p.id))+1,
+           description:'',category:'Uncategorised',emoji:'🌿',image_url:null,is_active:true,...product};
+         return [...products,created];
+       });
+       return send(res,201,{product:created});
+     } catch(e) { return send(res,/configured|unavailable|HTTP/.test(e.message)?503:400,{error:e.message}); }
+   }
+   const productMatch = url.pathname.match(/^\/api\/admin\/products\/(\d+)$/);
+   if (productMatch && req.method === 'PATCH') {
+     if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
+     try {
+       const id=Number(productMatch[1]);
+       if (!Number.isSafeInteger(id)||id<1) throw Error('Invalid product ID');
+       const changes=validateProduct(await jsonBody(req,8192),true);
+       let updated;
+       await updateCatalogue(products => {
+         const p=products.find(p=>p.id===id);
+         if(!p) throw Error('Product not found');
+         Object.assign(p,changes); if(p.weight_variants===null) delete p.weight_variants; updated=p; return products;
+       });
+       return send(res,200,{product:updated});
+     } catch(e) { return send(res,e.message==='Product not found'?404:/configured|unavailable|HTTP/.test(e.message)?503:400,{error:e.message}); }
+   }
+   if (productMatch && req.method === 'DELETE') {
+     if (!sameOrigin(req)) return send(res,403,{error:'Invalid origin'});
+     try {
+       const id=Number(productMatch[1]);
+       await updateCatalogue(products => {
+         if(!products.some(p=>p.id===id)) throw Error('Product not found');
+         return products.filter(p=>p.id!==id);
+       });
+       return send(res,200,{deleted:true});
+     } catch(e) { return send(res,e.message==='Product not found'?404:503,{error:e.message}); }
+   }
+return send(res,404,{error:'Not found'});
  }
-if (req.method === 'POST' && url.pathname === '/api/webhook') {
+ if (req.method === 'POST' && url.pathname === '/api/webhook') {
   try {
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
       return send(res, 503, { error: 'Webhook not configured' });
