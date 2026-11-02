@@ -48,7 +48,7 @@ body > footer{
  position:fixed !important;
  left:0 !important;
  right:0 !important;
- bottom:var(--ao-visual-bottom,0px) !important;
+ bottom:0 !important;
  width:100%;
  z-index:15;
  margin:0 !important;
@@ -57,7 +57,7 @@ body > footer{
 }
 
 /* Prevent Safari rubber-band scrolling past the start of the storefront. */
-html,body{overscroll-behavior-y:none}
+html,body{overscroll-behavior-y:none}\n.drawer{overscroll-behavior-y:contain}
 </style></head><body><header><div class="brand">✳ Alkaline Online</div><button onclick="openCart()">Basket (<span id="count">0</span>)</button></header><section class="hero"><div class="eyebrow">Nature's everyday essentials</div><h1>Plant-based goodness, thoughtfully selected.</h1><p>Discover herbs, plant-based foods and everyday natural essentials. As an independent sole-trader business, we prepare orders with care.</p><button onclick="document.getElementById('shop').scrollIntoView({behavior:'smooth'})">Explore the collection</button><div class="dispatch-banner"><strong>Plan ahead for your order</strong><p>Every order requires 24–48 hours of preparation before dispatch. Please place orders in advance, especially if you need your items by a particular date. Delivery time is additional.</p></div></section><main id="shop"><div class="eyebrow">Our collection</div><h2>Shop naturally</h2><div class="filters" id="filters"></div><div class="grid" id="products"></div><p class="note" id="api-status" role="status">Checking product catalogue connection…</p><p class="note">Product availability is based on manually maintained inventory. All orders require 24–48 hours before dispatch.</p></main><footer><div class="brand">✳ Alkaline Online</div><p>Plant-based living, made simple.</p><small>© 2026 Alkaline Online</small></footer><div class="drawer" id="drawer"><div class="panel"><button class="close" onclick="closeCart()">✕ Close</button><h2>Your basket</h2><div id="cartlines"></div><h3 id="total"></h3><button class="basket-continue" type="button" onclick="closeCart()">Continue shopping</button><form id="order" onsubmit="submitOrder(event)"><h2>Delivery & contact details</h2><p class="dispatch-checkout"><strong>Dispatch notice:</strong> All orders require 24–48 hours before dispatch. Delivery time is additional. Please order in advance.</p><label class="field"><input type="checkbox" required style="width:auto;margin-right:8px">I understand my order requires 24–48 hours before dispatch.</label><label class="field">Full name<input name="name" autocomplete="name" required></label><label class="field">Email address<input name="email" type="email" autocomplete="email" required></label><label class="field">Phone number<input name="phone" type="tel" autocomplete="tel" required></label><label class="field">Delivery address<input name="address" autocomplete="street-address" required></label><label class="field">Town or city<input name="city" autocomplete="address-level2" required></label><label class="field">Postcode<input name="postcode" autocomplete="postal-code" required></label><label class="field">Order notes<textarea name="notes" placeholder="Optional delivery instructions"></textarea></label><button class="full" type="submit">Proceed to secure payment</button><p class="note">You will be redirected to Stripe for secure payment. No payment is taken on this page.</p></form><div id="message" role="status"></div></div></div><div id="basket-feedback" role="status" aria-live="polite" hidden></div><script>const products=[];let category='All',cart={},catalogueReady=false;const money=n=>'£'+n.toFixed(2);const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const key=(id,grams)=>grams?`${id}:${grams}`:String(id);
 function selected(p){const select=document.getElementById('weight-'+p.id);return select?Number(select.value):null}
@@ -69,7 +69,17 @@ let basketFeedbackTimer;function notifyBasket(message){const el=document.getElem
 function resetCheckoutMessage(){document.getElementById('message').textContent=''}
 function add(id){const p=products.find(p=>p.id===id);if(!catalogueReady||!p)return;const grams=p.variants?selected(p):null;const v=p.variants?option(p,grams):null;const stock=v?v.stock_quantity:p.stock;const k=key(id,grams);if(!stock||((cart[k]?.quantity||0)>=stock)){alert('This item is out of stock or has reached its available quantity.');return}cart[k]={id,grams,quantity:(cart[k]?.quantity||0)+1};render();notifyBasket('Added to basket — '+p.n+(grams?' ('+grams+'g)':''))}
 function openCart(){document.getElementById('drawer').classList.add('open');document.getElementById('drawer').scrollTop=0;resetCheckoutMessage();renderCart()}
-function closeCart(){document.getElementById('drawer').classList.remove('open');resetCheckoutMessage()}
+function closeCart(){
+ const drawer=document.getElementById('drawer');
+ if(drawer.contains(document.activeElement)&&document.activeElement.blur)document.activeElement.blur();
+ drawer.classList.remove('open');
+ drawer.scrollTop=0;
+ resetCheckoutMessage();
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  document.documentElement.style.removeProperty('--ao-visual-bottom');
+  if(window.scrollY<0)window.scrollTo(0,0);
+ }));
+}
 function change(k,d){const item=cart[k],p=products.find(p=>p.id===item?.id);if(!item||!p)return;const v=item.grams?option(p,item.grams):null;if(d>0&&item.quantity>=(v?v.stock_quantity:p.stock))return;item.quantity+=d;if(item.quantity<=0)delete cart[k];resetCheckoutMessage();render();renderCart()}
 function removeItem(k){if(!Object.prototype.hasOwnProperty.call(cart,k))return;delete cart[k];resetCheckoutMessage();render();renderCart()}
 function renderCart(){let total=0;document.getElementById('cartlines').innerHTML=Object.entries(cart).length?Object.entries(cart).map(([k,item])=>{const p=products.find(p=>p.id===item.id);if(!p)return '';const v=item.grams?option(p,item.grams):null;const price=(v?v.price_pence:p.price_pence)/100;total+=price*item.quantity;return `<div class="line"><div><b>${esc(p.n)}${v?' — '+v.grams+'g':''}</b><br>${money(price)} × ${item.quantity}</div><div class="basket-actions"><button type="button" aria-label="Decrease quantity" onclick="change('${k}',-1)">−</button> ${item.quantity} <button type="button" aria-label="Increase quantity" onclick="change('${k}',1)">+</button><button type="button" class="basket-remove" onclick="removeItem('${k}')">Remove</button></div></div>`}).join(''):'Your basket is empty.';document.getElementById('total').textContent='Subtotal: '+money(total);document.getElementById('order').style.display=total&&catalogueReady?'block':'none';if(!total)resetCheckoutMessage()}
@@ -119,7 +129,10 @@ async function connectCatalogue(){const status=document.getElementById('api-stat
  },{passive:true});
  document.addEventListener('touchmove',function(e){
   if(!e.cancelable||e.touches.length!==1)return;
-  if(document.getElementById('drawer').classList.contains('open'))return;
+  if(document.getElementById('drawer').classList.contains('open')){
+   if(!e.target.closest('#drawer'))e.preventDefault();
+   return;
+  }
   if(e.target.closest('input,textarea,select,[contenteditable="true"]'))return;
   const pullingDown=e.touches[0].clientY>startY;
   if(pullingDown && window.scrollY<=0)e.preventDefault();
