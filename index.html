@@ -55,6 +55,9 @@ body > footer{
  transform:none !important;
  -webkit-transform:none !important;
 }
+
+/* Prevent Safari rubber-band scrolling past the start of the storefront. */
+html,body{overscroll-behavior-y:none}
 </style></head><body><header><div class="brand">✳ Alkaline Online</div><button onclick="openCart()">Basket (<span id="count">0</span>)</button></header><section class="hero"><div class="eyebrow">Nature's everyday essentials</div><h1>Plant-based goodness, thoughtfully selected.</h1><p>Discover herbs, plant-based foods and everyday natural essentials. As an independent sole-trader business, we prepare orders with care.</p><button onclick="document.getElementById('shop').scrollIntoView({behavior:'smooth'})">Explore the collection</button><div class="dispatch-banner"><strong>Plan ahead for your order</strong><p>Every order requires 24–48 hours of preparation before dispatch. Please place orders in advance, especially if you need your items by a particular date. Delivery time is additional.</p></div></section><main id="shop"><div class="eyebrow">Our collection</div><h2>Shop naturally</h2><div class="filters" id="filters"></div><div class="grid" id="products"></div><p class="note" id="api-status" role="status">Checking product catalogue connection…</p><p class="note">Product availability is based on manually maintained inventory. All orders require 24–48 hours before dispatch.</p></main><footer><div class="brand">✳ Alkaline Online</div><p>Plant-based living, made simple.</p><small>© 2026 Alkaline Online</small></footer><div class="drawer" id="drawer"><div class="panel"><button class="close" onclick="closeCart()">✕ Close</button><h2>Your basket</h2><div id="cartlines"></div><h3 id="total"></h3><button class="basket-continue" type="button" onclick="closeCart()">Continue shopping</button><form id="order" onsubmit="submitOrder(event)"><h2>Delivery & contact details</h2><p class="dispatch-checkout"><strong>Dispatch notice:</strong> All orders require 24–48 hours before dispatch. Delivery time is additional. Please order in advance.</p><label class="field"><input type="checkbox" required style="width:auto;margin-right:8px">I understand my order requires 24–48 hours before dispatch.</label><label class="field">Full name<input name="name" autocomplete="name" required></label><label class="field">Email address<input name="email" type="email" autocomplete="email" required></label><label class="field">Phone number<input name="phone" type="tel" autocomplete="tel" required></label><label class="field">Delivery address<input name="address" autocomplete="street-address" required></label><label class="field">Town or city<input name="city" autocomplete="address-level2" required></label><label class="field">Postcode<input name="postcode" autocomplete="postal-code" required></label><label class="field">Order notes<textarea name="notes" placeholder="Optional delivery instructions"></textarea></label><button class="full" type="submit">Proceed to secure payment</button><p class="note">You will be redirected to Stripe for secure payment. No payment is taken on this page.</p></form><div id="message" role="status"></div></div></div><div id="basket-feedback" role="status" aria-live="polite" hidden></div><script>const products=[];let category='All',cart={},catalogueReady=false;const money=n=>'£'+n.toFixed(2);const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const key=(id,grams)=>grams?`${id}:${grams}`:String(id);
 function selected(p){const select=document.getElementById('weight-'+p.id);return select?Number(select.value):null}
@@ -105,5 +108,21 @@ async function connectCatalogue(){const status=document.getElementById('api-stat
  window.addEventListener('pageshow',update);
  window.addEventListener('orientationchange',update);
  update();
+})();
+
+/* iOS Safari fallback: prevent downward pull beyond the page's true top.
+   Normal scrolling, basket scrolling, and form controls remain untouched. */
+(function preventTopRubberBand(){
+ let startY=0;
+ document.addEventListener('touchstart',function(e){
+  if(e.touches.length===1)startY=e.touches[0].clientY;
+ },{passive:true});
+ document.addEventListener('touchmove',function(e){
+  if(!e.cancelable||e.touches.length!==1)return;
+  if(document.getElementById('drawer').classList.contains('open'))return;
+  if(e.target.closest('input,textarea,select,[contenteditable="true"]'))return;
+  const pullingDown=e.touches[0].clientY>startY;
+  if(pullingDown && window.scrollY<=0)e.preventDefault();
+ },{passive:false});
 })();
 </script></body></html>
