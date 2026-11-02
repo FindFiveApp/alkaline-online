@@ -20,6 +20,12 @@ body > header {
 @supports (padding: max(0px)) {
   body > header { padding-top: max(14px, env(safe-area-inset-top, 0px)); }
 }
+/* Stage 1 header: fixed to the visual viewport, with space reserved below. */
+:root{--ao-admin-header-height:76px}
+html{scroll-padding-top:calc(var(--ao-admin-header-height) + 12px)}
+body{padding-top:var(--ao-admin-header-height)}
+body > header{position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%;z-index:1000!important;margin:0!important;transform:none!important;-webkit-transform:none!important}
+.tabs{top:calc(var(--ao-admin-header-height) + 2px)!important}
 </style></head><body>
 <header><div class="brand">✳ Alkaline Online</div><button id="logout" hidden>Sign out</button></header>
 <main><section id="login" class="card"><h1>Admin sign in</h1><p class="muted">Private store management. Sign in with your administrator password.</p><form id="loginForm"><label for="password">Admin password</label><input id="password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form><p id="loginError" class="error" role="alert"></p></section>
@@ -32,6 +38,15 @@ body > header {
 </section></main>
 <script>
 'use strict';
+// Reserve the exact header height so fixed positioning never hides dashboard content.
+(function(){
+  const header=document.querySelector('body > header');
+  if(!header)return;
+  const sync=()=>document.documentElement.style.setProperty('--ao-admin-header-height',Math.ceil(header.getBoundingClientRect().height)+'px');
+  sync();
+  if(typeof ResizeObserver!=='undefined')new ResizeObserver(sync).observe(header);
+  window.addEventListener('orientationchange',sync);
+})();
 const $=id=>document.getElementById(id);
 const money=(v,c='gbp')=>new Intl.NumberFormat('en-GB',{style:'currency',currency:(c||'gbp').toUpperCase()}).format((v||0)/100);
 const date=t=>new Date(t*1000).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'});
