@@ -153,11 +153,34 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 #productForm>.actions button{min-height:47px}
 #productStatus{margin:8px 0 12px}
 @media(max-width:390px){#productsPanel>.card{padding:14px 10px}#productList .product{padding:12px 9px;gap:9px}#productList .product img{width:55px;height:55px}#productList .product .actions button{font-size:11px}}
+
+/* V14 — Store Overview presentation only; preserve the existing fixed header. */
+#overviewPanel .stats .card{margin:0;min-width:0;border-radius:16px;padding:17px 15px;box-shadow:0 3px 15px rgba(28,57,35,.045)}
+#overviewPanel .stats .big{font-size:clamp(23px,6vw,32px);line-height:1.25;overflow-wrap:anywhere;margin-top:7px;font-variant-numeric:tabular-nums}
+#overviewPanel .stats .muted.small{font-weight:650;color:#4b6754}
+#overviewPanel .stats .metric-note{line-height:1.4}
+#overviewPanel .overview-actions button{min-width:0;min-height:72px;text-align:left;line-height:1.35;padding:14px;white-space:normal}
+#overviewPanel .overview-head{gap:12px}
+#overviewPanel .overview-head .section-heading{margin:0}
+#overviewPanel .overview-head button{flex-shrink:0}
+#overviewPanel .overview-card-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+#overviewPanel .overview-card-title h2{margin:0}
+#overviewPanel .overview-card-title button{padding:9px 12px}
+#overviewPanel .overview-recent-item{padding:13px 0;border-top:1px solid #e6ece4;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#overviewPanel .overview-recent-item:first-child{border-top:0}
+#overviewPanel .overview-recent-item .overview-order-info{min-width:0;overflow-wrap:anywhere}
+#overviewPanel .overview-recent-item .overview-order-value{text-align:right;flex-shrink:0}
+#overviewPanel .overview-recent-item .tag{display:inline-block;margin-top:6px}
+#overviewPanel .stock-line{align-items:center;overflow-wrap:anywhere}
+#overviewPanel .stock-line strong{white-space:nowrap}
+#overviewPanel .stock-line.out strong{color:#a12c2c}
+#overviewPanel .overview-hint{margin-top:16px}
+@media(max-width:390px){#overviewPanel .stats .card{padding:13px 11px}#overviewPanel .stats .big{font-size:23px}#overviewPanel .overview-actions button{padding:12px 10px;font-size:13px}}
 </style></head><body>
 <header><div class="brand">✳ Alkaline Online</div><button id="logout" hidden>Sign out</button></header>
 <main><section id="login" class="card"><h1>Admin sign in</h1><p class="muted">Private store management. Sign in with your administrator password.</p><form id="loginForm"><label for="password">Admin password</label><input id="password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form><p id="loginError" class="error" role="alert"></p></section>
 <section id="dashboard"><h1>Store overview</h1><p class="muted">Manage your Alkaline Online products and Stripe orders. Product edits are saved to GitHub.</p><nav class="tabs" aria-label="Admin sections"><button type="button" id="overviewTab" aria-selected="true">Overview</button><button type="button" id="ordersTab" aria-selected="false">Orders</button><button type="button" id="productsTab" aria-selected="false">Products &amp; stock</button></nav>
-<div id="overviewPanel"><div class="overview-head"><h2 class="section-heading">Today’s store</h2><button type="button" class="secondary" id="refreshOverview">Refresh</button></div><p class="muted small">Live summary from your existing product catalogue and the latest Stripe checkout sessions.</p><div class="stats"><div class="card"><div class="muted small">Paid sales shown</div><div class="big" id="ovRevenue">—</div><div class="metric-note">Latest Stripe sessions</div></div><div class="card"><div class="muted small">Paid orders shown</div><div class="big" id="ovPaid">—</div><div class="metric-note">Latest Stripe sessions</div></div><div class="card"><div class="muted small">Awaiting dispatch</div><div class="big" id="ovDispatch">—</div><div class="metric-note">Paid, not dispatched</div></div><div class="card"><div class="muted small">Low / out of stock</div><div class="big" id="ovLow">—</div><div class="metric-note">5 packs or fewer</div></div></div><p class="dashboard-message muted" id="overviewStatus" role="status">Loading overview…</p><div class="card"><h2 class="section-heading">Quick actions</h2><div class="overview-actions"><button type="button" id="quickOrders">View orders →</button><button type="button" id="quickProducts">Manage products →</button><button type="button" class="secondary" id="quickStock">Check low stock →</button><button type="button" class="secondary" id="quickAdd">Add a product +</button></div></div><div class="card"><h2 class="section-heading">Stock alerts</h2><div id="overviewStock"><p class="muted small">Checking stock…</p></div></div><p class="overview-hint">Figures are based on the latest 50 Stripe Checkout sessions, not lifetime sales. Stock is not automatically deducted after payment yet. We’ll add persistent order records and automatic stock updates in a later stage.</p></div>
+<div id="overviewPanel"><div class="overview-head"><h2 class="section-heading">Today’s store</h2><button type="button" class="secondary" id="refreshOverview">Refresh</button></div><p class="muted small">Live summary from your existing product catalogue and the latest Stripe checkout sessions.</p><div class="stats"><div class="card"><div class="muted small">Paid sales shown</div><div class="big" id="ovRevenue">—</div><div class="metric-note">Latest Stripe sessions</div></div><div class="card"><div class="muted small">Paid orders shown</div><div class="big" id="ovPaid">—</div><div class="metric-note">Latest Stripe sessions</div></div><div class="card"><div class="muted small">Awaiting dispatch</div><div class="big" id="ovDispatch">—</div><div class="metric-note">Paid, not dispatched</div></div><div class="card"><div class="muted small">Low / out of stock</div><div class="big" id="ovLow">—</div><div class="metric-note">5 packs or fewer</div></div></div><p class="dashboard-message muted" id="overviewStatus" role="status">Loading overview…</p><div class="card"><h2 class="section-heading">Quick actions</h2><div class="overview-actions"><button type="button" id="quickOrders">View orders →</button><button type="button" id="quickProducts">Manage products →</button><button type="button" class="secondary" id="quickStock">Check low stock →</button><button type="button" class="secondary" id="quickAdd">Add a product +</button></div></div><div class="card"><div class="overview-card-title"><h2 class="section-heading">Recent checkouts</h2><button type="button" class="secondary" id="overviewAllOrders">All orders</button></div><p class="muted small">Latest three checkout sessions. A checkout is not necessarily a paid order.</p><div id="overviewRecent"><p class="muted small">Checking recent orders…</p></div></div><div class="card"><h2 class="section-heading">Stock alerts</h2><div id="overviewStock"><p class="muted small">Checking stock…</p></div></div><p class="overview-hint">Figures are based on the latest 50 Stripe Checkout sessions, not lifetime sales. Stock is not automatically deducted after payment yet. We’ll add persistent order records and automatic stock updates in a later stage.</p></div>
 <div id="ordersPanel" hidden><div class="stats"><div class="card"><div class="muted">Paid orders shown</div><div id="paidCount" class="big">—</div></div><div class="card"><div class="muted">Paid sales shown</div><div id="paidTotal" class="big">—</div></div><div class="card"><div class="muted">Checkout sessions shown</div><div id="sessionCount" class="big">—</div></div></div><div class="card"><div class="orderhead"><h2>Recent orders</h2><button id="refresh">Refresh</button></div><p id="status" class="muted" role="status">Loading orders…</p><div id="orders"></div></div><p class="muted small">Showing up to 50 recent Stripe Checkout sessions. Figures are not a full accounting report. Refunds, fees, payouts and stock are not tracked here. Fulfilment status is stored in Stripe Checkout metadata. Customer delivery details appear only if Stripe collected them.</p></div>
 <div id="productsPanel" hidden><div class="stats"><div class="card"><div class="muted">Total products</div><div class="big" id="productCount">—</div></div><div class="card"><div class="muted">Active products</div><div class="big" id="activeCount">—</div></div><div class="card"><div class="muted">Out of stock</div><div class="big" id="outCount">—</div></div></div>
 <div class="card"><h2 id="formTitle">Add a product</h2><form id="productForm"><div class="formgrid"><div><label for="pName">Product name *</label><input id="pName" maxlength="120" required></div><div><label for="pCategory">Category *</label><input id="pCategory" maxlength="80" required></div><div class="wide"><label for="pDescription">Description</label><textarea id="pDescription" maxlength="1500"></textarea></div><div class="wide checkrow"><input id="pRoot" type="checkbox"><label for="pRoot">Root product — enable customer weight selection</label></div><div class="wide" id="rootPrices" hidden><p class="muted small">Set a price and available pack quantity for each weight. Root products cannot be saved until all five prices are entered.</p><div class="formgrid"><div><label for="rootPrice25">25g price (£)</label><input id="rootPrice25" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div><label for="rootStock25">25g packs in stock</label><input id="rootStock25" type="number" min="0" step="1" value="0"></div><div><label for="rootPrice50">50g price (£)</label><input id="rootPrice50" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div><label for="rootStock50">50g packs in stock</label><input id="rootStock50" type="number" min="0" step="1" value="0"></div><div><label for="rootPrice100">100g price (£)</label><input id="rootPrice100" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div><label for="rootStock100">100g packs in stock</label><input id="rootStock100" type="number" min="0" step="1" value="0"></div><div><label for="rootPrice250">250g price (£)</label><input id="rootPrice250" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div><label for="rootStock250">250g packs in stock</label><input id="rootStock250" type="number" min="0" step="1" value="0"></div><div><label for="rootPrice500">500g price (£)</label><input id="rootPrice500" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div><label for="rootStock500">500g packs in stock</label><input id="rootStock500" type="number" min="0" step="1" value="0"></div></div></div><div><label for="pPrice">Price (£) *</label><input id="pPrice" type="number" min="0.01" max="100000" step="0.01" inputmode="decimal" required></div><div><label for="pStock">Stock quantity *</label><input id="pStock" type="number" min="0" max="1000000" step="1" required></div><div><label for="pEmoji">Product emoji</label><input id="pEmoji" maxlength="16" placeholder="🌿"></div><div class="wide"><label for="pImage">Image URL (HTTPS; paste a hosted image link)</label><input id="pImage" type="url" placeholder="https://example.com/product.jpg" maxlength="1000"></div><div class="wide checkrow"><input id="pActive" type="checkbox" checked><label for="pActive">Active — show product in storefront catalogue</label></div></div><div class="actions"><button id="saveProduct" type="submit">Add product</button><button id="cancelEdit" class="secondary" type="button" hidden>Cancel editing</button></div><p id="productMessage" role="status"></p></form></div>
@@ -186,7 +209,55 @@ $('pRoot').addEventListener('change',updateRootFields);
 function show(isLogged){$('login').style.display=isLogged?'none':'block';$('dashboard').style.display=isLogged?'block':'none';$('logout').hidden=!isLogged;if(isLogged){switchTab('overview');}else{products=[];resetProductForm();}}
 function switchTab(which){const isOrders=which==='orders',isProducts=which==='products',isOverview=which==='overview';$('overviewPanel').hidden=!isOverview;$('ordersPanel').hidden=!isOrders;$('productsPanel').hidden=!isProducts;$('overviewTab').setAttribute('aria-selected',String(isOverview));$('ordersTab').setAttribute('aria-selected',String(isOrders));$('productsTab').setAttribute('aria-selected',String(isProducts));if(isOverview)loadOverview();if(isOrders)loadOrders();if(isProducts)loadProducts();window.scrollTo({top:0,behavior:'instant'});}
 function stockFor(p){return Array.isArray(p.weight_variants)?p.weight_variants.reduce((n,v)=>n+(Number(v.stock_quantity)||0),0):Number(p.stock_quantity)||0;}
-async function loadOverview(){const status=$('overviewStatus');status.textContent='Refreshing store overview…';const results=await Promise.allSettled([request('/api/admin/orders'),request('/api/admin/products')]);let problems=[];if(results[0].status==='fulfilled'){const data=results[0].value,orders=data.orders||[],paid=orders.filter(o=>o.payment_status==='paid'),gbp=paid.filter(o=>(o.currency||'gbp').toLowerCase()==='gbp');$('ovPaid').textContent=paid.length;$('ovRevenue').textContent=gbp.length===paid.length?money(gbp.reduce((n,o)=>n+(o.amount_total||0),0)):'Multiple currencies';$('ovDispatch').textContent=paid.filter(o=>!['Dispatched','Delivered'].includes(o.fulfilment_status||'Preparing')).length;if(data.has_more)problems.push('Order totals are limited to the latest 50 sessions.');}else{problems.push('Orders: '+results[0].reason.message);for(const id of ['ovPaid','ovRevenue','ovDispatch'])$(id).textContent='—';}if(results[1].status==='fulfilled'){const all=results[1].value.products||[];const low=all.filter(p=>p.is_active&&stockFor(p)<=5);$('ovLow').textContent=low.length;const box=$('overviewStock');box.replaceChildren();if(!low.length)box.append(el('p','success small','No active products at or below five packs.'));for(const p of low){const row=el('div','stock-line');row.append(el('span','',p.name),el('strong','',stockFor(p)+' packs'));box.append(row);}}else{$('ovLow').textContent='—';$('overviewStock').replaceChildren(el('p','error small','Stock information unavailable.'));problems.push('Products: '+results[1].reason.message);}status.textContent=problems.length?problems.join(' '):'Overview updated.';}
+async function loadOverview(){
+  const status=$('overviewStatus');
+  status.textContent='Refreshing store overview…';
+  const results=await Promise.allSettled([request('/api/admin/orders'),request('/api/admin/products')]);
+  const problems=[];
+  const recent=$('overviewRecent');
+  recent.replaceChildren();
+  if(results[0].status==='fulfilled'){
+    const data=results[0].value,orders=data.orders||[];
+    const paid=orders.filter(o=>o.payment_status==='paid');
+    const gbp=paid.filter(o=>(o.currency||'gbp').toLowerCase()==='gbp');
+    $('ovPaid').textContent=paid.length;
+    $('ovRevenue').textContent=gbp.length===paid.length?money(gbp.reduce((n,o)=>n+(o.amount_total||0),0)):'Multiple currencies';
+    $('ovDispatch').textContent=paid.filter(o=>!['Dispatched','Delivered'].includes(o.fulfilment_status||'Preparing')).length;
+    if(!orders.length){recent.append(el('p','muted small','No checkout sessions yet.'));}
+    for(const o of orders.slice().sort((a,b)=>(b.created||0)-(a.created||0)).slice(0,3)){
+      const row=el('div','overview-recent-item');
+      const left=el('div','overview-order-info');
+      left.append(el('strong','',o.customer_name||'Customer name unavailable'));
+      if(o.created)left.append(el('div','muted small',date(o.created)));
+      const right=el('div','overview-order-value');
+      right.append(el('strong','',money(o.amount_total,o.currency)));
+      right.append(el('div','tag'+(o.payment_status==='paid'?'':' warn'),o.payment_status==='paid'?'Paid':(o.payment_status||'Unknown')));
+      row.append(left,right);recent.append(row);
+    }
+    if(data.has_more)problems.push('Order totals are limited to the latest 50 sessions.');
+  }else{
+    problems.push('Orders: '+results[0].reason.message);
+    for(const id of ['ovPaid','ovRevenue','ovDispatch'])$(id).textContent='—';
+    recent.append(el('p','error small','Recent checkouts unavailable.'));
+  }
+  if(results[1].status==='fulfilled'){
+    const all=results[1].value.products||[];
+    const low=all.filter(p=>p.is_active&&stockFor(p)<=5).sort((a,b)=>stockFor(a)-stockFor(b));
+    $('ovLow').textContent=low.length;
+    const box=$('overviewStock');box.replaceChildren();
+    if(!low.length)box.append(el('p','success small','No active products at or below five packs.'));
+    for(const p of low){
+      const quantity=stockFor(p),row=el('div','stock-line'+(quantity===0?' out':''));
+      row.append(el('span','',p.name),el('strong','',quantity===0?'Out of stock':quantity+' packs left'));
+      box.append(row);
+    }
+  }else{
+    $('ovLow').textContent='—';
+    $('overviewStock').replaceChildren(el('p','error small','Stock information unavailable.'));
+    problems.push('Products: '+results[1].reason.message);
+  }
+  status.textContent=problems.length?problems.join(' '):'Overview updated.';
+}
 
 async function loadOrders() {
   const container = $('orders');
@@ -285,6 +356,7 @@ $('productForm').addEventListener('submit',async e=>{e.preventDefault();const pr
 $('overviewTab').addEventListener('click',()=>switchTab('overview'));
 $('refreshOverview').addEventListener('click',loadOverview);
 $('quickOrders').addEventListener('click',()=>switchTab('orders'));
+$('overviewAllOrders').addEventListener('click',()=>switchTab('orders'));
 $('quickProducts').addEventListener('click',()=>switchTab('products'));
 $('quickStock').addEventListener('click',()=>{switchTab('products');$('productList').scrollIntoView({behavior:'smooth'});});
 $('quickAdd').addEventListener('click',()=>{switchTab('products');resetProductForm();$('productForm').scrollIntoView({behavior:'smooth'});});
