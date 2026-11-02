@@ -122,6 +122,37 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 #orders .order-session{font-size:11px;line-height:1.5;overflow-wrap:anywhere;padding-top:11px;border-top:1px solid #e9eee7;color:#6a7b6c}
 #ordersPanel>p.muted.small{font-size:12px;line-height:1.55;padding:0 2px}
 @media(max-width:390px){#ordersPanel>.card{padding:14px 11px}#orders .order{padding:15px 12px}#orders .orderhead strong{font-size:21px}}
+
+/* V13 Products & Stock: visual enhancements only; original header and API untouched. */
+#productsPanel>.card{padding:17px 14px}
+#productsPanel .stats{margin-top:8px}
+#productsPanel .orderhead{align-items:center;margin-bottom:12px}
+#productsPanel .orderhead h2{margin:0;font-size:22px}
+#productSearchArea{margin:14px 0 10px;padding:14px;background:#f4f7f1;border:1px solid #e1e9dd;border-radius:13px}
+#productSearchArea label{display:block;font-size:13px;font-weight:700;margin-bottom:8px}
+#productSearch{margin:0;min-height:47px;font-size:16px;background:white}
+#productSearchCount{margin:9px 0 0;font-size:12px;color:#617365}
+#productList{display:grid;gap:12px;margin-top:14px}
+#productList .product{border:1px solid #e1e8dd!important;border-radius:14px;padding:14px 12px;margin:0;background:#fff;box-shadow:0 2px 10px rgba(28,57,35,.04)}
+#productList .product img{width:72px;height:72px;border-radius:12px}
+#productList .productcontent h3{font-size:16px;font-weight:750;margin:0 0 7px}
+#productList .productcontent>p{margin:0 0 9px;font-size:12px;line-height:1.6;color:#536a58}
+#productList .product .tag{display:inline-flex;align-items:center;margin:1px 0 8px;padding:6px 10px}
+#productList .product .tag.stock-low{background:#fff2d8;color:#815315}
+#productList .product .tag.stock-out{background:#fae8e5;color:#a0322c}
+#productList .product .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:9px}
+#productList .product .actions button{min-width:0;min-height:44px;padding:9px 5px;font-size:12px;overflow-wrap:anywhere}
+#productList .product .actions button:first-child{background:#e1efe1;color:#245032}
+#productList .product .actions button:last-child{background:#fbebea;color:#a03d36}
+#productForm{margin-top:8px}
+#productForm .formgrid>div{min-width:0}
+#productForm input,#productForm textarea{border-color:#b7c8b5}
+#productForm input:focus,#productForm textarea:focus{border-color:#467a52}
+#rootPrices{padding:14px;background:#f4f7f1}
+#productForm>.actions{padding-top:5px}
+#productForm>.actions button{min-height:47px}
+#productStatus{margin:8px 0 12px}
+@media(max-width:390px){#productsPanel>.card{padding:14px 10px}#productList .product{padding:12px 9px;gap:9px}#productList .product img{width:55px;height:55px}#productList .product .actions button{font-size:11px}}
 </style></head><body>
 <header><div class="brand">✳ Alkaline Online</div><button id="logout" hidden>Sign out</button></header>
 <main><section id="login" class="card"><h1>Admin sign in</h1><p class="muted">Private store management. Sign in with your administrator password.</p><form id="loginForm"><label for="password">Admin password</label><input id="password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form><p id="loginError" class="error" role="alert"></p></section>
@@ -130,7 +161,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 <div id="ordersPanel" hidden><div class="stats"><div class="card"><div class="muted">Paid orders shown</div><div id="paidCount" class="big">—</div></div><div class="card"><div class="muted">Paid sales shown</div><div id="paidTotal" class="big">—</div></div><div class="card"><div class="muted">Checkout sessions shown</div><div id="sessionCount" class="big">—</div></div></div><div class="card"><div class="orderhead"><h2>Recent orders</h2><button id="refresh">Refresh</button></div><p id="status" class="muted" role="status">Loading orders…</p><div id="orders"></div></div><p class="muted small">Showing up to 50 recent Stripe Checkout sessions. Figures are not a full accounting report. Refunds, fees, payouts and stock are not tracked here. Fulfilment status is stored in Stripe Checkout metadata. Customer delivery details appear only if Stripe collected them.</p></div>
 <div id="productsPanel" hidden><div class="stats"><div class="card"><div class="muted">Total products</div><div class="big" id="productCount">—</div></div><div class="card"><div class="muted">Active products</div><div class="big" id="activeCount">—</div></div><div class="card"><div class="muted">Out of stock</div><div class="big" id="outCount">—</div></div></div>
 <div class="card"><h2 id="formTitle">Add a product</h2><form id="productForm"><div class="formgrid"><div><label for="pName">Product name *</label><input id="pName" maxlength="120" required></div><div><label for="pCategory">Category *</label><input id="pCategory" maxlength="80" required></div><div class="wide"><label for="pDescription">Description</label><textarea id="pDescription" maxlength="1500"></textarea></div><div class="wide checkrow"><input id="pRoot" type="checkbox"><label for="pRoot">Root product — enable customer weight selection</label></div><div class="wide" id="rootPrices" hidden><p class="muted small">Set a price and available pack quantity for each weight. Root products cannot be saved until all five prices are entered.</p><div class="formgrid"><div><label for="rootPrice25">25g price (£)</label><input id="rootPrice25" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div><label for="rootStock25">25g packs in stock</label><input id="rootStock25" type="number" min="0" step="1" value="0"></div><div><label for="rootPrice50">50g price (£)</label><input id="rootPrice50" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div><label for="rootStock50">50g packs in stock</label><input id="rootStock50" type="number" min="0" step="1" value="0"></div><div><label for="rootPrice100">100g price (£)</label><input id="rootPrice100" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div><label for="rootStock100">100g packs in stock</label><input id="rootStock100" type="number" min="0" step="1" value="0"></div><div><label for="rootPrice250">250g price (£)</label><input id="rootPrice250" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div><label for="rootStock250">250g packs in stock</label><input id="rootStock250" type="number" min="0" step="1" value="0"></div><div><label for="rootPrice500">500g price (£)</label><input id="rootPrice500" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div><label for="rootStock500">500g packs in stock</label><input id="rootStock500" type="number" min="0" step="1" value="0"></div></div></div><div><label for="pPrice">Price (£) *</label><input id="pPrice" type="number" min="0.01" max="100000" step="0.01" inputmode="decimal" required></div><div><label for="pStock">Stock quantity *</label><input id="pStock" type="number" min="0" max="1000000" step="1" required></div><div><label for="pEmoji">Product emoji</label><input id="pEmoji" maxlength="16" placeholder="🌿"></div><div class="wide"><label for="pImage">Image URL (HTTPS; paste a hosted image link)</label><input id="pImage" type="url" placeholder="https://example.com/product.jpg" maxlength="1000"></div><div class="wide checkrow"><input id="pActive" type="checkbox" checked><label for="pActive">Active — show product in storefront catalogue</label></div></div><div class="actions"><button id="saveProduct" type="submit">Add product</button><button id="cancelEdit" class="secondary" type="button" hidden>Cancel editing</button></div><p id="productMessage" role="status"></p></form></div>
-<div class="card"><div class="orderhead"><h2>Product catalogue</h2><button id="refreshProducts" type="button">Refresh</button></div><p id="productStatus" class="muted" role="status">Loading products…</p><div id="productList"></div></div><p class="muted small">Product edits are saved to GitHub products.json. Stock is not yet deducted automatically after payment. Deactivating a product removes it from the active catalogue but does not delete its record.</p></div>
+<div class="card"><div class="orderhead"><h2>Product catalogue</h2><button id="refreshProducts" type="button">Refresh</button></div><div id="productSearchArea"><label for="productSearch">Search your catalogue</label><input id="productSearch" type="search" autocomplete="off" placeholder="Search product name or category" aria-controls="productList"><p id="productSearchCount" role="status">Search by name or category</p></div><p id="productStatus" class="muted" role="status">Loading products…</p><div id="productList"></div></div><p class="muted small">Product edits are saved to GitHub products.json. Stock is not yet deducted automatically after payment. Deactivating a product removes it from the active catalogue but does not delete its record.</p></div>
 </section></main>
 <script>
 'use strict';
@@ -246,7 +277,7 @@ async function loadOrders() {
     if (/Login required/.test(e.message)) show(false);
   }
 }
-async function loadProducts(){$('productStatus').textContent='Loading products…';$('productList').replaceChildren();try{const data=await request('/api/admin/products');products=Array.isArray(data.products)?data.products:[];$('productCount').textContent=products.length;$('activeCount').textContent=products.filter(p=>p.is_active).length;$('outCount').textContent=products.filter(p=>p.stock_quantity===0).length;$('productStatus').textContent=products.length?`${products.length} products found.`:'No products yet. Add your first product above.';for(const p of products){const item=el('section','product');if(p.image_url){const img=el('img');img.src=p.image_url;img.alt='';img.loading='lazy';img.referrerPolicy='no-referrer';item.append(img)}const content=el('div','productcontent');content.append(el('h3','',p.name),el('p','muted small',`${p.category||'Uncategorised'} · ${Array.isArray(p.weight_variants)?'Weight options':money(p.price_pence)} · Stock: ${p.stock_quantity}`));const badge=el('span','tag'+(!p.is_active||p.stock_quantity===0?' warn':''),!p.is_active?'Inactive':p.stock_quantity===0?'Out of stock':'Active');content.append(badge);const actions=el('div','actions');const del=el('button','secondary','Delete');del.type='button';del.addEventListener('click',async()=>{if(!confirm('Permanently delete '+p.name+'?'))return;del.disabled=true;try{await request('/api/admin/products/'+p.id,{method:'DELETE'});await loadProducts()}catch(err){$('productStatus').textContent='Could not delete product: '+err.message;del.disabled=false}});const edit=el('button','secondary','Edit');edit.type='button';edit.addEventListener('click',()=>editProduct(p));const toggle=el('button','secondary',p.is_active?'Deactivate':'Activate');toggle.type='button';toggle.addEventListener('click',()=>toggleProduct(p,toggle));actions.append(edit,toggle,del);content.append(actions);item.append(content);$('productList').append(item)}}catch(err){$('productStatus').textContent='Could not load products: '+err.message;if(/Login required/.test(err.message))show(false)}}
+async function loadProducts(){$('productStatus').textContent='Loading products…';$('productList').replaceChildren();try{const data=await request('/api/admin/products');products=Array.isArray(data.products)?data.products:[];$('productCount').textContent=products.length;$('activeCount').textContent=products.filter(p=>p.is_active).length;$('outCount').textContent=products.filter(p=>p.stock_quantity===0).length;$('productStatus').textContent=products.length?`${products.length} products found.`:'No products yet. Add your first product above.';for(const p of products){const item=el('section','product');if(p.image_url){const img=el('img');img.src=p.image_url;img.alt='';img.loading='lazy';img.referrerPolicy='no-referrer';item.append(img)}const content=el('div','productcontent');content.append(el('h3','',p.name),el('p','muted small',`${p.category||'Uncategorised'} · ${Array.isArray(p.weight_variants)?'Weight options':money(p.price_pence)} · Stock: ${stockFor(p)}`));const qty=stockFor(p);const badge=el('span','tag'+(!p.is_active||qty===0?' warn':'')+(p.is_active&&qty===0?' stock-out':p.is_active&&qty<=5?' stock-low':''),!p.is_active?'Inactive':qty===0?'Out of stock':qty<=5?'Low stock':'In stock');content.append(badge);const actions=el('div','actions');const del=el('button','secondary','Delete');del.type='button';del.addEventListener('click',async()=>{if(!confirm('Permanently delete '+p.name+'?'))return;del.disabled=true;try{await request('/api/admin/products/'+p.id,{method:'DELETE'});await loadProducts()}catch(err){$('productStatus').textContent='Could not delete product: '+err.message;del.disabled=false}});const edit=el('button','secondary','Edit');edit.type='button';edit.addEventListener('click',()=>editProduct(p));const toggle=el('button','secondary',p.is_active?'Deactivate':'Activate');toggle.type='button';toggle.addEventListener('click',()=>toggleProduct(p,toggle));actions.append(edit,toggle,del);content.append(actions);item.append(content);$('productList').append(item)}}catch(err){$('productStatus').textContent='Could not load products: '+err.message;if(/Login required/.test(err.message))show(false)}}
 function resetProductForm(){editingId=null;$('productForm').reset();$('pActive').checked=true;updateRootFields();$('formTitle').textContent='Add a product';$('saveProduct').textContent='Add product';$('cancelEdit').hidden=true;$('productMessage').textContent='';$('productMessage').className=''}
 function editProduct(p){editingId=p.id;$('pRoot').checked=Array.isArray(p.weight_variants);updateRootFields();for(const g of ROOT_WEIGHTS){const v=p.weight_variants?.find(v=>v.grams===g);$('rootPrice'+g).value=v?(v.price_pence/100).toFixed(2):'';$('rootStock'+g).value=v?.stock_quantity??0;}$('pName').value=p.name||'';$('pCategory').value=p.category||'';$('pDescription').value=p.description||'';$('pPrice').value=(p.price_pence/100).toFixed(2);$('pStock').value=p.stock_quantity;$('pImage').value=p.image_url||'';$('pEmoji').value=p.emoji||'🌿';$('pActive').checked=!!p.is_active;$('formTitle').textContent='Edit product #'+p.id;$('saveProduct').textContent='Save changes';$('cancelEdit').hidden=false;$('productMessage').textContent='';$('productForm').scrollIntoView({behavior:'smooth',block:'start'})}
 async function toggleProduct(p,button){button.disabled=true;try{await request('/api/admin/products/'+p.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_active:!p.is_active})});await loadProducts()}catch(err){$('productStatus').textContent='Could not update product: '+err.message;button.disabled=false}}
@@ -264,4 +295,26 @@ $('refreshProducts').addEventListener('click',loadProducts);
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginError').textContent='';try{await request('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('password').value})});$('password').value='';show(true)}catch(err){$('loginError').textContent=err.message}});
 $('logout').addEventListener('click',async()=>{try{await request('/api/admin/logout',{method:'POST'})}finally{show(false)}});$('refresh').addEventListener('click',loadOrders);
 request('/api/admin/session').then(d=>show(d.authenticated)).catch(()=>show(false));
+
+// V13 local catalogue search: no network requests or changes to saved products.
+(function(){
+ const input=document.getElementById('productSearch');
+ const list=document.getElementById('productList');
+ const count=document.getElementById('productSearchCount');
+ if(!input||!list||!count)return;
+ function filter(){
+   const query=input.value.trim().toLocaleLowerCase();
+   const cards=Array.from(list.querySelectorAll(':scope > .product'));
+   let shown=0;
+   cards.forEach(card=>{
+     const match=!query||card.textContent.toLocaleLowerCase().includes(query);
+     card.hidden=!match;
+     if(match)shown++;
+   });
+   count.textContent=query?`${shown} of ${cards.length} products matching your search`:`${cards.length} products in catalogue`;
+ }
+ input.addEventListener('input',filter);
+ new MutationObserver(filter).observe(list,{childList:true});
+ filter();
+})();
 </script></body></html>
