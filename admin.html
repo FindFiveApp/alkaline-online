@@ -26,6 +26,74 @@ html{scroll-padding-top:calc(var(--ao-admin-header-height) + 12px)}
 body{padding-top:var(--ao-admin-header-height)}
 body > header{position:fixed!important;top:0!important;left:0!important;right:0!important;width:100%;z-index:1000!important;margin:0!important;transform:none!important;-webkit-transform:none!important}
 .tabs{top:calc(var(--ao-admin-header-height) + 2px)!important}
+
+/* Improvement 11: iPhone-first dashboard visual refinement.
+   Presentation only: existing header positioning, API calls, IDs and JS stay intact. */
+:root{--ao-ink:#233d2d;--ao-muted:#617365;--ao-border:#e2e9df;--ao-surface:#fff;--ao-canvas:#f7f8f3}
+html{overflow-x:hidden;-webkit-text-size-adjust:100%}
+body{overflow-x:clip}
+main{width:100%;min-width:0;max-width:740px;margin-inline:auto;padding:20px 16px max(84px,env(safe-area-inset-bottom,0px))}
+#dashboard,#overviewPanel,#ordersPanel,#productsPanel{min-width:0}
+#dashboard>h1{font-size:clamp(28px,7vw,34px);line-height:1.14;letter-spacing:-.7px;margin:2px 0 10px}
+#dashboard>p.muted{font-size:13px;line-height:1.55;margin:0 0 18px;max-width:58ch}
+.section-heading,.card>h2,.orderhead h2{font-size:clamp(20px,5.4vw,24px);line-height:1.2;letter-spacing:-.35px}
+.card{border:1px solid var(--ao-border);border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 3px 14px rgba(28,57,35,.045)}
+.card>h2{margin:0 0 14px}
+.tabs{margin:0 0 20px;padding:10px 0 12px;gap:7px;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.3fr);border-bottom:1px solid var(--ao-border)}
+.tabs button{min-width:0;min-height:46px;padding:10px 5px;border-radius:11px;font-size:12px;line-height:1.2;white-space:normal;overflow-wrap:anywhere;transition:background-color .15s ease}
+.tabs button[aria-selected="true"]{background:#254d35;color:#fff;box-shadow:0 3px 8px rgba(37,77,53,.14)}
+.tabs button[aria-selected="false"]{background:#edf1e8;color:#35553d}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 20px}
+.stats .card,.stats .card:last-child{grid-column:auto;margin:0;padding:16px 13px;min-width:0;box-shadow:none;border-radius:14px}
+.stats .card>.muted{font-size:12px;line-height:1.35;min-height:31px}
+.big{font-size:clamp(23px,6.6vw,31px);line-height:1.2;letter-spacing:-.7px;margin-top:8px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.metric-note{line-height:1.4;font-size:11px;margin-top:7px}
+.overview-head{align-items:center;margin:4px 0 6px}
+.overview-head .section-heading{margin:0}
+.overview-head button,.orderhead>button{flex-shrink:0}
+#overviewPanel>.muted.small{font-size:12px;line-height:1.5;margin:6px 0 12px}
+.overview-actions{gap:9px}
+.overview-actions button{min-height:72px;padding:13px 12px;text-align:left;line-height:1.35;border-radius:12px;font-size:13px}
+.stock-line{align-items:baseline;line-height:1.45}
+.stock-line span{min-width:0;overflow-wrap:anywhere}
+.stock-line strong{flex-shrink:0}
+.overview-hint{margin:18px 0;padding:15px;border-radius:12px;font-size:12px;line-height:1.65}
+.order,.product{padding:18px 0;border-color:#e7ece5}
+.orderhead{align-items:center;gap:10px}
+.orderhead h2{margin:0}
+.orderhead .tag{flex-shrink:0}
+.order .small,.product .small{line-height:1.6;overflow-wrap:anywhere}
+.order ul{margin:12px 0;padding-left:19px}
+.fulfilment-row{align-items:stretch;gap:8px}
+.fulfilment-row label{width:100%;display:flex;flex-direction:column;gap:8px;font-weight:600}
+.fulfilment-row select{width:100%;max-width:100%;margin:0;font-weight:500}
+.product{gap:12px}
+.product img{width:66px;height:66px;flex-shrink:0;border:1px solid var(--ao-border)}
+.productcontent{min-width:0;overflow-wrap:anywhere}
+.product h3{font-size:16px;line-height:1.35}
+.product .actions{gap:7px}
+.product .actions button{padding:10px 12px;font-size:12px;min-height:42px}
+.formgrid{gap:0 14px}
+#productForm label{display:block;font-size:13px;font-weight:600;line-height:1.45}
+#productForm input,#productForm textarea,#productForm select{margin-top:7px;margin-bottom:16px;min-height:46px;font-size:16px}
+#productForm textarea{min-height:100px}
+#productForm .checkrow{align-items:flex-start;margin:5px 0 17px;gap:10px}
+#productForm .checkrow input{min-height:auto;width:19px;height:19px;flex-shrink:0;margin:2px 0 0}
+#productForm .checkrow label{font-weight:500}
+#rootPrices{background:#f8faf6;border:1px solid var(--ao-border);border-radius:12px;padding:12px;margin:2px 0 18px}
+#rootPrices .formgrid{gap:0 10px}
+#rootPrices .formgrid>div{min-width:0}
+.actions button{min-height:44px}
+#productMessage,#productStatus,#status{line-height:1.5;overflow-wrap:anywhere}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #a6c5a6;outline-offset:2px}
+@media(max-width:600px){
+ .formgrid{grid-template-columns:1fr}
+ .product img{width:58px;height:58px}
+ #rootPrices .formgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:360px){main{padding-left:12px;padding-right:12px}.card{padding:15px}.stats .card{padding:12px 10px}.tabs button{font-size:11px}.product .actions button{padding:9px 10px}}
+@media(min-width:601px){main{padding-top:28px}.tabs button{font-size:14px}.formgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 </style></head><body>
 <header><div class="brand">✳ Alkaline Online</div><button id="logout" hidden>Sign out</button></header>
 <main><section id="login" class="card"><h1>Admin sign in</h1><p class="muted">Private store management. Sign in with your administrator password.</p><form id="loginForm"><label for="password">Admin password</label><input id="password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form><p id="loginError" class="error" role="alert"></p></section>
