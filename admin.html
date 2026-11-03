@@ -176,6 +176,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 #overviewPanel .stock-line.out strong{color:#a12c2c}
 #overviewPanel .overview-hint{margin-top:16px}
 @media(max-width:390px){#overviewPanel .stats .card{padding:13px 11px}#overviewPanel .stats .big{font-size:23px}#overviewPanel .overview-actions button{padding:12px 10px;font-size:13px}}
+
+/* V14.1: Keep the Deactivate/Activate label on one line on iPhone.
+   Two actions share the first row; Delete gets its own full-width row. */
+#productList .product .actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#productList .product .actions button{white-space:nowrap;overflow-wrap:normal;word-break:normal;padding:10px 7px;font-size:12px}
+#productList .product .actions button:last-child{grid-column:1/-1}
+@media(max-width:390px){#productList .product .actions button{font-size:12px;padding:10px 5px}}
 </style></head><body>
 <header><div class="brand">✳ Alkaline Online</div><button id="logout" hidden>Sign out</button></header>
 <main><section id="login" class="card"><h1>Admin sign in</h1><p class="muted">Private store management. Sign in with your administrator password.</p><form id="loginForm"><label for="password">Admin password</label><input id="password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form><p id="loginError" class="error" role="alert"></p></section>
