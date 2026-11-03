@@ -183,6 +183,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 #productList .product .actions button{white-space:nowrap;overflow-wrap:normal;word-break:normal;padding:10px 7px;font-size:12px}
 #productList .product .actions button:last-child{grid-column:1/-1}
 @media(max-width:390px){#productList .product .actions button{font-size:12px;padding:10px 5px}}
+
+/* V14.2: compact Stripe reference with an accessible full-ID copy control. */
+#orders .order-session-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:12px;margin-top:12px;border-top:1px solid #e9eee7;min-width:0}
+#orders .order-session-short{font-size:12px;color:#6a7b6c;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#orders .order-session-copy{flex:0 0 auto;min-height:38px;padding:8px 12px;font-size:12px;white-space:nowrap}
 </style></head><body>
 <header><div class="brand">✳ Alkaline Online</div><button id="logout" hidden>Sign out</button></header>
 <main><section id="login" class="card"><h1>Admin sign in</h1><p class="muted">Private store management. Sign in with your administrator password.</p><form id="loginForm"><label for="password">Admin password</label><input id="password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form><p id="loginError" class="error" role="alert"></p></section>
@@ -347,7 +352,38 @@ async function loadOrders() {
         row.append(label, note);
         section.append(row);
       }
-      section.append(el('div', 'muted small order-session', 'Stripe session: ' + o.id));
+      // Compact reference in the order card; retain the complete ID for copying.
+      const sessionRow = el('div', 'order-session-row');
+      const sessionText = el('span', 'muted small order-session-short',
+        'Stripe session: …' + String(o.id || '').slice(-10));
+      const copySession = el('button', 'secondary order-session-copy', 'Copy ID');
+      copySession.type = 'button';
+      copySession.setAttribute('aria-label', 'Copy full Stripe session ID');
+      copySession.addEventListener('click', async () => {
+        try {
+          if (!navigator.clipboard || !navigator.clipboard.writeText) {
+            throw new Error('Clipboard unavailable');
+          }
+          await navigator.clipboard.writeText(String(o.id));
+          copySession.textContent = 'Copied';
+        } catch (_) {
+          // Fallback on older iPhone browser contexts; select the full ID for copying.
+          const input = document.createElement('textarea');
+          input.value = String(o.id);
+          input.setAttribute('readonly', '');
+          input.style.cssText = 'position:fixed;left:-9999px;top:0';
+          document.body.append(input);
+          input.select();
+          let copied = false;
+          try { copied = document.execCommand('copy'); } catch (_) {}
+          input.remove();
+          copySession.textContent = copied ? 'Copied' : 'Copy unavailable';
+        }
+        copySession.disabled = true;
+        setTimeout(() => { copySession.textContent = 'Copy ID'; copySession.disabled = false; }, 1800);
+      });
+      sessionRow.append(sessionText, copySession);
+      section.append(sessionRow);
       container.append(section);
     }
   } catch (e) {
