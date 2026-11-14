@@ -368,7 +368,7 @@ window.addEventListener('pageshow',()=>{
 function renderCategoryTiles(){
  const host=document.getElementById('categoryTiles');
  if(!host)return;
- const categories=[...new Set(products.map(p=>p.c).filter(Boolean))];
+ const categories=[...new Set(products.map(p=>p.c).filter(name=>name && name.trim().toLowerCase()!=='spices'))];
  const symbols=['🌿','🍵','🌾','🍃','🌱','☘️'];
  host.replaceChildren();
  categories.forEach((name,index)=>{
